@@ -9,25 +9,6 @@ use std::ops::{ControlFlow, FromResidual, Try};
 pub use self::Result::Err;
 pub use self::Result::Ok;
 
-/*   ___ _ __ _ __ ___  _ __  _ __   _____      __
- *  / _ \ '__| '__/ _ \| '__|| '_ \ / _ \ \ /\ / /
- * |  __/ |  | | | (_) | |   | | | |  __/\ V  V /
- *  \___|_|  |_|  \___/|_|___|_| |_|\___| \_/\_/
- *                      |_____|
- *  FIGLET: error_new
- */
-
-/// Constructs a [`Result<T, E>`] with the top frame of the stack pointing to the caller.
-///
-/// This function is to be used in place of `Err(..)` to produce a new erroneous result.
-///
-/// See [`propagate`][crate] for more information.
-#[inline]
-#[track_caller]
-pub fn error_new<T, E, F: From<E>>(err: E) -> self::Result<T, F> {
-    Err(ErrorStack::new(From::from(err)))
-}
-
 /*  ____                 _ _    _______   _______
  * |  _ \ ___  ___ _   _| | |_ / /_   _| | ____\ \
  * | |_) / _ \/ __| | | | | __/ /  | |   |  _|  \ \
@@ -124,6 +105,27 @@ impl<T, E> FromResidual<std::result::Result<Infallible, E>> for Result<T, E> {
 
 /// Stuff not from the standard library.
 impl<T, E> Result<T, E> {
+    /// Constructs a new error result from the provided error value.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// let x: Result<u32, &str> = Result::new_err("Nothing here");
+    /// ```
+    #[inline]
+    #[track_caller]
+    // pub fn new_err(error_value: E) -> Self {
+    //     Err(ErrorStack::new(error_value))
+    // }
+    pub fn new_err<D>(error_value: D) -> Self
+    where
+        E: From<D>,
+    {
+        Err(ErrorStack::new(E::from(error_value)))
+    }
+
     /// Converts from `Result<T, E>` to [`std::result::Result<T, E>`].
     ///
     /// Converts `self` into a [`std::result::Result<T, E>`], consuming `self`.
@@ -136,7 +138,7 @@ impl<T, E> Result<T, E> {
     /// let x: Result<u32, &str> = Ok(2);
     /// assert_eq!(x.to_std(), std::result::Result::Ok(2));
     ///
-    /// let x: Result<u32, &str> = Err(ErrorStack::new("Nothing here"));
+    /// let x: Result<u32, &str> = Result::new_err("Nothing here");
     /// assert_eq!(x.to_std(), std::result::Result::Err("Nothing here"));
     /// ```
     #[inline]
@@ -166,9 +168,9 @@ impl<T, E> Result<T, E> {
     ///
     /// ```
     /// let x: Result<u32, &str> = Ok(2);
-    /// assert_eq!(x.err(), None);
+    /// assert_eq!(x.err_stack(), None);
     ///
-    /// let x: Result<u32, &str> = Err(ErrorStack::new("Nothing here"));
+    /// let x: Result<u32, &str> = Result::new_err("Nothing here");
     /// match x.err_stack() {
     ///     Some(e) => assert_eq!(*e, "Nothing here"),
     ///     None => unreachable!(),
@@ -198,7 +200,7 @@ impl<T, E> Result<T, E> {
     /// let x: Result<i32, &str> = Ok(-3);
     /// assert_eq!(x.is_ok(), true);
     ///
-    /// let x: Result<i32, &str> = Err("Some error message");
+    /// let x: Result<i32, &str> = Result::new_err("Some error message");
     /// assert_eq!(x.is_ok(), false);
     /// ```
     #[must_use = "if you intended to assert that this is ok, consider `.unwrap()` instead"]
@@ -217,7 +219,7 @@ impl<T, E> Result<T, E> {
     /// let x: Result<i32, &str> = Ok(-3);
     /// assert_eq!(x.is_err(), false);
     ///
-    /// let x: Result<i32, &str> = Err("Some error message");
+    /// let x: Result<i32, &str> = Result::new_err("Some error message");
     /// assert_eq!(x.is_err(), true);
     /// ```
     #[must_use = "if you intended to assert that this is err, consider `.unwrap_err()` instead"]
@@ -243,7 +245,7 @@ impl<T, E> Result<T, E> {
     /// let x: Result<u32, &str> = Ok(2);
     /// assert_eq!(x.ok(), Some(2));
     ///
-    /// let x: Result<u32, &str> = Err("Nothing here");
+    /// let x: Result<u32, &str> = Result::new_err("Nothing here");
     /// assert_eq!(x.ok(), None);
     /// ```
     #[inline]
@@ -267,7 +269,7 @@ impl<T, E> Result<T, E> {
     /// let x: Result<u32, &str> = Ok(2);
     /// assert_eq!(x.err(), None);
     ///
-    /// let x: Result<u32, &str> = Err("Nothing here");
+    /// let x: Result<u32, &str> = Result::new_err("Nothing here");
     /// assert_eq!(x.err(), Some("Nothing here"));
     /// ```
     #[inline]
@@ -298,7 +300,7 @@ impl<T, E> Result<T, E> {
     /// let x: Result<u32, &str> = Ok(2);
     /// assert_eq!(x.as_ref(), Ok(&2));
     ///
-    /// let x: Result<u32, &str> = Err("Error");
+    /// let x: Result<u32, &str> = Result::new_err("Error");
     /// assert_eq!(x.as_ref(), Err(&"Error"));
     /// ```
     #[inline]
@@ -331,7 +333,7 @@ impl<T, E> Result<T, E> {
     /// mutate(&mut x);
     /// assert_eq!(x.unwrap(), 42);
     ///
-    /// let mut x: Result<i32, i32> = Err(13);
+    /// let mut x: Result<i32, i32> = Result::new_err(13);
     /// mutate(&mut x);
     /// assert_eq!(x.unwrap_err(), 0);
     /// ```
@@ -369,7 +371,7 @@ impl<T, E> Result<T, E> {
     /// let x: Result<u32, u32> = Ok(2);
     /// assert_eq!(x.map_err(stringify), Ok(2));
     ///
-    /// let x: Result<u32, u32> = Err(13);
+    /// let x: Result<u32, u32> = Result::new_err(13);
     /// assert_eq!(x.map_err(stringify), Err("error code: 13".to_string()));
     /// ```
     #[inline]
@@ -406,7 +408,7 @@ impl<T, E> Result<T, E> {
     /// let x: Result<u32, &str> = Ok(9);
     /// assert_eq!(x.unwrap_or(default), 9);
     ///
-    /// let x: Result<u32, &str> = Err("error");
+    /// let x: Result<u32, &str> = Result::new_err("error");
     /// assert_eq!(x.unwrap_or(default), default);
     /// ```
     #[inline]
@@ -452,7 +454,7 @@ impl<T, E: fmt::Debug> Result<T, E> {
     /// Basic usage:
     ///
     /// ```should_panic
-    /// let x: Result<u32, &str> = Err("emergency failure");
+    /// let x: Result<u32, &str> = Result::new_err("emergency failure");
     /// x.expect("Testing expect"); // panics with `Testing expect: emergency failure`
     /// ```
     #[inline]
@@ -491,7 +493,7 @@ impl<T, E: fmt::Debug> Result<T, E> {
     /// ```
     ///
     /// ```should_panic
-    /// let x: Result<u32, &str> = Err("emergency failure");
+    /// let x: Result<u32, &str> = Result::new_err("emergency failure");
     /// x.unwrap(); // panics with `emergency failure`
     /// ```
     #[inline]
@@ -544,7 +546,7 @@ impl<T: fmt::Debug, E> Result<T, E> {
     /// ```
     ///
     /// ```
-    /// let x: Result<u32, &str> = Err("emergency failure");
+    /// let x: Result<u32, &str> = Result::new_err("emergency failure");
     /// assert_eq!(x.unwrap_err(), "emergency failure");
     /// ```
     #[inline]
@@ -651,11 +653,20 @@ mod test {
      */
 
     #[test]
+    fn new_err_coerce() {
+        fn inner() -> Result<u32, String> {
+            let x: Result<u32, String> = Result::new_err("string slice");
+            x
+        }
+        assert_eq!(inner().err().unwrap(), String::from("string slice"));
+    }
+
+    #[test]
     fn can_convert_to_std_result() {
         let x: Result<u32, &str> = Ok(2);
         assert_eq!(x.to_std(), std::result::Result::Ok(2));
 
-        let x: Result<u32, &str> = error_new("Nothing here");
+        let x: Result<u32, &str> = Result::new_err("Nothing here");
         assert_eq!(x.to_std(), std::result::Result::Err("Nothing here"));
     }
 
@@ -764,12 +775,12 @@ mod test {
     }
 
     #[test]
-    fn error_new_coerces_to_custom_error_type_from_inner() {
+    fn new_err_coerces_to_custom_error_type_from_inner() {
         let mut fix = Fixture::default();
 
         let mut bottom = || -> Result<(), MyError> {
             fix.tag_location("bottom", CodeLocation::here().down_by(1));
-            error_new("oops".to_string())
+            Result::new_err("oops".to_string())
         };
 
         let result = bottom();
@@ -777,13 +788,13 @@ mod test {
     }
 
     #[test]
-    fn error_new_coerces_to_result_from_custom_error_type() {
+    fn new_err_coerces_to_result_from_custom_error_type() {
         let mut fix = Fixture::default();
 
         let mut bottom = || -> Result<(), MyError> {
             let my_error = MyError::Other("oops".to_string());
             fix.tag_location("bottom", CodeLocation::here().down_by(1));
-            error_new(my_error)
+            Result::new_err(my_error)
         };
 
         let result = bottom();

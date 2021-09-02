@@ -2,7 +2,7 @@
 name = "propagate"
 version = "0.0.1"
 edition = "2018"
-author = "Ben Reeves"
+author = "Ben Reeves <breeves@qumulo.com>"
 description = "Error propagation tracking in Rust."
 
 [dependencies]
