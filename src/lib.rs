@@ -3,9 +3,9 @@
 //! # Working with `Result<T, E>`
 //!
 //! When a [`Result<T, E>`] is equal to `Err(e)`, the value `e` is not actually of type `E`.
-//! It is of type [`StackError<E>`].
+//! It is of type [`ErrorStack<E>`].
 //!
-//! [`StackError<E>`] is a wrapper around an arbitrary error value, and it stores a stack trace
+//! [`ErrorStack<E>`] is a wrapper around an arbitrary error value, and it stores a stack trace
 //! alongside the wrapped error value.
 //!
 //! Because of this, if you want to pattern match a `Result<T, E>` and get a value of `E`, you
@@ -80,7 +80,7 @@ pub mod result;
 
 #[doc(inline)]
 pub use self::{
-    error::{CodeLocation, CodeLocationStack, StackError},
+    error::{CodeLocation, CodeLocationStack, ErrorStack},
     result::Result,
     result::{eforward, error_new},
 };

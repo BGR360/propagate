@@ -89,12 +89,12 @@ impl CodeLocationStack {
     }
 }
 
-/*  ____  _             _    _____
- * / ___|| |_ __ _  ___| | _| ____|_ __ _ __ ___  _ __
- * \___ \| __/ _` |/ __| |/ /  _| | '__| '__/ _ \| '__|
- *  ___) | || (_| | (__|   <| |___| |  | | | (_) | |
- * |____/ \__\__,_|\___|_|\_\_____|_|  |_|  \___/|_|
- *  FIGLET: StackError
+/*  _____                     ____  _             _
+ * | ____|_ __ _ __ ___  _ __/ ___|| |_ __ _  ___| | __
+ * |  _| | '__| '__/ _ \| '__\___ \| __/ _` |/ __| |/ /
+ * | |___| |  | | | (_) | |   ___) | || (_| | (__|   <
+ * |_____|_|  |_|  \___/|_|  |____/ \__\__,_|\___|_|\_\
+ *  FIGLET: ErrorStack
  */
 
 /// A wrapper around a generic error type. Keeps track of a stack of code locations.
@@ -120,13 +120,13 @@ impl CodeLocationStack {
 /// }
 /// ```
 #[derive(Debug)]
-pub struct StackError<E> {
+pub struct ErrorStack<E> {
     pub(crate) error: E,
     pub(crate) stack: CodeLocationStack,
 }
 
-impl<E> StackError<E> {
-    /// Constructs a new [`StackError`] from the given error.
+impl<E> ErrorStack<E> {
+    /// Constructs a new [`ErrorStack`] from the given error.
     ///
     /// The stack will contain the source location of the caller of this function. If that
     /// function's caller is also annotated with `#[track_caller]`, then its location will be used
@@ -158,17 +158,17 @@ impl<E> StackError<E> {
     }
 
     /// Converts the wrapped error from type `E` to type `F`.
-    pub(crate) fn convert_inner<F: From<E>>(self) -> StackError<F> {
-        // N.B. I would implement this as `From<StackError<E>> for StackError<F>`,
+    pub(crate) fn convert_inner<F: From<E>>(self) -> ErrorStack<F> {
+        // N.B. I would implement this as `From<ErrorStack<E>> for ErrorStack<F>`,
         // but that conflicts with the blanket trait `From<T> for T` when `E` == `F`.
-        StackError {
+        ErrorStack {
             error: From::from(self.error),
             stack: self.stack,
         }
     }
 }
 
-impl<E> Deref for StackError<E> {
+impl<E> Deref for ErrorStack<E> {
     type Target = E;
 
     /// Returns a reference to the wrapped error.
@@ -191,17 +191,17 @@ mod test {
     use crate::test::Fixture;
 
     #[test]
-    fn stack_error_new_and_push_both_append_to_stack() {
+    fn error_stack_new_and_push_both_append_to_stack() {
         let mut fix = Fixture::default();
 
         fix.tag_location("new", CodeLocation::here().down_by(1));
-        let mut stack_err = StackError::new("oops");
+        let mut err_stack = ErrorStack::new("oops");
 
-        fix.assert_error_has_stack(&stack_err, &["new"]);
+        fix.assert_error_has_stack(&err_stack, &["new"]);
 
         fix.tag_location("push", CodeLocation::here().down_by(1));
-        stack_err.push_caller();
+        err_stack.push_caller();
 
-        fix.assert_error_has_stack(&stack_err, &["new", "push"]);
+        fix.assert_error_has_stack(&err_stack, &["new", "push"]);
     }
 }

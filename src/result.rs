@@ -1,6 +1,6 @@
 //! Defines a new result type.
 
-use crate::error::StackError;
+use crate::error::ErrorStack;
 
 use std::convert::Infallible;
 use std::fmt;
@@ -26,7 +26,7 @@ pub use self::Result::Ok;
 #[inline]
 #[track_caller]
 pub fn error_new<T, E, F: From<E>>(err: E) -> self::Result<T, F> {
-    Err(StackError::new(From::from(err)))
+    Err(ErrorStack::new(From::from(err)))
 }
 
 /// Appends the stack frame of the caller onto the provided [`Result<T, E>`] if it is `Err(..)`.
@@ -65,8 +65,8 @@ pub fn eforward<T, E, F: From<E>>(result: self::Result<T, E>) -> self::Result<T,
 pub enum Result<T, E> {
     /// Contains the success value.
     Ok(T),
-    /// Contains the error value wrapped in a [`StackError`].
-    Err(StackError<E>),
+    /// Contains the error value wrapped in a [`ErrorStack`].
+    Err(ErrorStack<E>),
 }
 
 /*  _                 _   _____
@@ -128,7 +128,7 @@ impl<T, E> FromResidual<std::result::Result<Infallible, E>> for Result<T, E> {
     fn from_residual(residual: std::result::Result<Infallible, E>) -> Self {
         match residual {
             std::result::Result::Ok(_) => unreachable!(),
-            std::result::Result::Err(e) => Err(StackError::new(e)),
+            std::result::Result::Err(e) => Err(ErrorStack::new(e)),
         }
     }
 }
@@ -156,7 +156,7 @@ impl<T, E> Result<T, E> {
     /// let x: Result<u32, &str> = Ok(2);
     /// assert_eq!(x.to_std(), std::result::Result::Ok(2));
     ///
-    /// let x: Result<u32, &str> = Err(StackError::new("Nothing here"));
+    /// let x: Result<u32, &str> = Err(ErrorStack::new("Nothing here"));
     /// assert_eq!(x.to_std(), std::result::Result::Err("Nothing here"));
     /// ```
     #[inline]
@@ -175,9 +175,9 @@ impl<T, E> Result<T, E> {
         }
     }
 
-    /// Converts from `Result<T, E>` to [`Option<StackError<E>>`].
+    /// Converts from `Result<T, E>` to [`Option<ErrorStack<E>>`].
     ///
-    /// Converts `self` into an [`Option<StackError<E>>`], consuming `self`,
+    /// Converts `self` into an [`Option<ErrorStack<E>>`], consuming `self`,
     /// and discarding the success value, if any.
     ///
     /// # Examples
@@ -188,14 +188,14 @@ impl<T, E> Result<T, E> {
     /// let x: Result<u32, &str> = Ok(2);
     /// assert_eq!(x.err(), None);
     ///
-    /// let x: Result<u32, &str> = Err(StackError::new("Nothing here"));
-    /// match x.err() {
+    /// let x: Result<u32, &str> = Err(ErrorStack::new("Nothing here"));
+    /// match x.err_stack() {
     ///     Some(e) => assert_eq!(*e, "Nothing here"),
     ///     None => unreachable!(),
     /// }
     /// ```
     #[inline]
-    pub fn stack_err(self) -> Option<StackError<E>> {
+    pub fn err_stack(self) -> Option<ErrorStack<E>> {
         match self {
             Ok(_) => None,
             Err(x) => Some(x),
@@ -302,7 +302,7 @@ impl<T, E> Result<T, E> {
     // Adapter for working with references
     /////////////////////////////////////////////////////////////////////////
 
-    // TODO: how to do this? I think the returned result should have a `&T` or a `&StackError<E>`,
+    // TODO: how to do this? I think the returned result should have a `&T` or a `&ErrorStack<E>`,
     // but idk how to make that happen.
     /*
     /// Converts from `&Result<T, E>` to `Result<&T, &E>`.
@@ -331,7 +331,7 @@ impl<T, E> Result<T, E> {
     */
 
     // TODO: how to do this? I think the returned result should have a `&mut T` or a
-    // `&mut StackError<E>`, but idk how to make that happen.
+    // `&mut ErrorStack<E>`, but idk how to make that happen.
     /*
     /// Converts from `&mut Result<T, E>` to `Result<&mut T, &mut E>`.
     ///
@@ -398,7 +398,7 @@ impl<T, E> Result<T, E> {
         // `?` or `eforward` with whatever comes out of this.
         match self {
             Ok(t) => Ok(t),
-            Err(e) => Err(StackError {
+            Err(e) => Err(ErrorStack {
                 error: op(e.error),
                 stack: e.stack,
             }),
