@@ -2,6 +2,14 @@
 
 Error propagation tracking in Rust.
 
+## Documentation
+
+Clone the repo and build docs using cargo:
+
+```
+cargo doc --open
+```
+
 ## Building
 
 Propagate requires [`#[feature(try_trait_v2)]`][try] and [`#[feature(control_flow_enum)]`][control]. Build with Rust nightly:
