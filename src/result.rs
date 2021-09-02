@@ -9,13 +9,12 @@ use std::ops::{ControlFlow, FromResidual, Try};
 pub use self::Result::Err;
 pub use self::Result::Ok;
 
-/*                                                        __                                  _
- *   ___ _ __ _ __ ___  _ __  _ __   _____      __   ___ / _| ___  _ ____      ____ _ _ __ __| |
- *  / _ \ '__| '__/ _ \| '__|| '_ \ / _ \ \ /\ / /  / _ \ |_ / _ \| '__\ \ /\ / / _` | '__/ _` |
- * |  __/ |  | | | (_) | |   | | | |  __/\ V  V /  |  __/  _| (_) | |   \ V  V / (_| | | | (_| |
- *  \___|_|  |_|  \___/|_|___|_| |_|\___| \_/\_( )  \___|_|  \___/|_|    \_/\_/ \__,_|_|  \__,_|
- *                      |_____|                |/
- *  FIGLET: error_new, eforward
+/*   ___ _ __ _ __ ___  _ __  _ __   _____      __
+ *  / _ \ '__| '__/ _ \| '__|| '_ \ / _ \ \ /\ / /
+ * |  __/ |  | | | (_) | |   | | | |  __/\ V  V /
+ *  \___|_|  |_|  \___/|_|___|_| |_|\___| \_/\_/
+ *                      |_____|
+ *  FIGLET: error_new
  */
 
 /// Constructs a [`Result<T, E>`] with the top frame of the stack pointing to the caller.
@@ -27,25 +26,6 @@ pub use self::Result::Ok;
 #[track_caller]
 pub fn error_new<T, E, F: From<E>>(err: E) -> self::Result<T, F> {
     Err(ErrorStack::new(From::from(err)))
-}
-
-/// Appends the stack frame of the caller onto the provided [`Result<T, E>`] if it is `Err(..)`.
-///
-/// This function is to be used when directly returning a value of type [`Result<T, E>`].
-/// Failing to wrap the return value with `eforward()` will result in lost information in the
-/// error's stack trace.
-///
-/// See [`propagate`][crate] for more information.
-#[inline]
-#[track_caller]
-pub fn eforward<T, E, F: From<E>>(result: self::Result<T, E>) -> self::Result<T, F> {
-    match result {
-        Ok(ok) => Ok(ok),
-        Err(mut err) => {
-            err.push_caller();
-            Err(err.convert_inner())
-        }
-    }
 }
 
 /*  ____                 _ _    _______   _______
@@ -395,7 +375,7 @@ impl<T, E> Result<T, E> {
     #[inline]
     pub fn map_err<F, O: FnOnce(E) -> F>(self, op: O) -> Result<T, F> {
         // XXX: should this push_caller? I think probably not, as users will just use
-        // `?` or `eforward` with whatever comes out of this.
+        // `?` with whatever comes out of this.
         match self {
             Ok(t) => Ok(t),
             Err(e) => Err(ErrorStack {
@@ -713,12 +693,12 @@ mod test {
     }
 
     #[test]
-    fn return_with_eforward_appends_to_stack() {
+    fn return_with_propagate_appends_to_stack() {
         let mut fix = Fixture::default();
 
         let mut bottom = || -> Result<(), io::Error> {
             fix.tag_location("bottom", CodeLocation::here().down_by(1));
-            eforward(maybe_io_error(&mut fix, true))
+            Ok(maybe_io_error(&mut fix, true)?)
         };
 
         let result = bottom();
@@ -726,7 +706,7 @@ mod test {
     }
 
     #[test]
-    fn return_without_eforward_does_not_append_to_stack() {
+    fn return_without_propagate_does_not_append_to_stack() {
         let mut fix = Fixture::default();
 
         let mut bottom = || -> Result<(), io::Error> {
@@ -771,12 +751,12 @@ mod test {
     }
 
     #[test]
-    fn eforward_coerces_to_custom_error_type() {
+    fn propagate_coerces_to_custom_error_type() {
         let mut fix = Fixture::default();
 
         let mut bottom = || -> Result<(), MyError> {
             fix.tag_location("bottom", CodeLocation::here().down_by(1));
-            eforward(maybe_io_error(&mut fix, true))
+            Ok(maybe_io_error(&mut fix, true)?)
         };
 
         let result = bottom();

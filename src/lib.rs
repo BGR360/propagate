@@ -50,8 +50,8 @@
 //!     if !lucky {
 //!         error_new(MyError::Unlucky)
 //!     } else {
-//!         // Use `eforward` when directly returning a `Result<T, E>`.
-//!         eforward(file_size(path))
+//!         // Use `Ok(..?)` when directly returning a `Result<T, E>`.
+//!         Ok(file_size(path)?)
 //!     }
 //! }
 //!
@@ -81,8 +81,8 @@ pub mod result;
 #[doc(inline)]
 pub use self::{
     error::{CodeLocation, CodeLocationStack, ErrorStack},
+    result::error_new,
     result::Result,
-    result::{eforward, error_new},
 };
 
 pub use self::result::Result::{Err, Ok};
@@ -90,9 +90,9 @@ pub use self::result::Result::{Err, Ok};
 pub mod prelude {
     use super::result;
 
+    pub use result::error_new;
     pub use result::Result;
     pub use result::Result::{Err, Ok};
-    pub use result::{eforward, error_new};
 }
 
 mod test;
