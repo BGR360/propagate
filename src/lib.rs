@@ -247,7 +247,7 @@ pub use self::result::Result::{Err, Ok};
 pub mod prelude {
     pub use crate::error::ErrorStack;
     pub use crate::result::Result;
-    pub use crate::result::Result::{Err, Ok};
+    pub use crate::result::Result::Ok;
 }
 
 mod test;
