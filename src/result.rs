@@ -83,13 +83,13 @@ impl<T, E, F: From<E>> FromResidual<Result<Infallible, E>> for Result<T, F> {
 }
 
 /// Starts a new stack when a [`std::result::Result`] is coerced to a [`Result`] using `?`.
-impl<T, E> FromResidual<std::result::Result<Infallible, E>> for Result<T, E> {
+impl<T, E, F: From<E>> FromResidual<std::result::Result<Infallible, E>> for Result<T, F> {
     #[inline]
     #[track_caller]
     fn from_residual(residual: std::result::Result<Infallible, E>) -> Self {
         match residual {
             std::result::Result::Ok(_) => unreachable!(),
-            std::result::Result::Err(e) => Err(ErrorStack::new(e)),
+            std::result::Result::Err(e) => Err(ErrorStack::new(From::from(e))),
         }
     }
 }
