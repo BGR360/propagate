@@ -6,6 +6,7 @@ author = "Ben Reeves <breeves@qumulo.com>"
 description = "Error propagation tracking in Rust."
 
 [dependencies]
+trial-and-error = { git = "https://github.com/yaahc/trial-and-error" }
 
 [lib]
 doctest = false
