@@ -232,6 +232,7 @@
 
 #![feature(try_trait_v2)]
 #![feature(control_flow_enum)]
+#![feature(termination_trait_lib)]
 
 pub mod error;
 pub mod result;

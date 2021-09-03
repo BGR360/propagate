@@ -5,6 +5,7 @@ use crate::error::ErrorStack;
 use std::convert::Infallible;
 use std::fmt;
 use std::ops::{ControlFlow, FromResidual, Try};
+use std::process::Termination;
 
 pub use self::Result::Err;
 pub use self::Result::Ok;
@@ -90,6 +91,27 @@ impl<T, E, F: From<E>> FromResidual<std::result::Result<Infallible, E>> for Resu
         match residual {
             std::result::Result::Ok(_) => unreachable!(),
             std::result::Result::Err(e) => Err(ErrorStack::new(From::from(e))),
+        }
+    }
+}
+
+impl<T, E: std::error::Error> Termination for Result<T, E> {
+    fn report(self) -> i32 {
+        match self {
+            Ok(_) => 0,
+            Err(err) => {
+                println!(
+                    "Error: {}",
+                    trial_and_error::Report::new(&*err).pretty(true)
+                );
+
+                let stack = err.stack();
+                if !stack.0.is_empty() {
+                    println!("\nReturn Trace: {}", err.stack());
+                }
+
+                1
+            }
         }
     }
 }

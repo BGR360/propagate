@@ -89,6 +89,16 @@ impl CodeLocationStack {
     }
 }
 
+impl fmt::Display for CodeLocationStack {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (index, location) in self.0.iter().enumerate() {
+            write!(f, "\n   {}: {}", index, location)?;
+        }
+
+        Ok(())
+    }
+}
+
 /*  _____                     ____  _             _
  * | ____|_ __ _ __ ___  _ __/ ___|| |_ __ _  ___| | __
  * |  _| | '__| '__/ _ \| '__\___ \| __/ _` |/ __| |/ /
