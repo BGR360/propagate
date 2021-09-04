@@ -1,10 +1,12 @@
 //! Defines a new result type.
 
 use crate::error::ErrorStack;
+use crate::CodeLocationStack;
 
 use std::convert::Infallible;
 use std::fmt;
 use std::ops::{ControlFlow, FromResidual, Try};
+use std::panic::Location;
 use std::process::Termination;
 
 pub use self::Result::Err;
@@ -24,11 +26,15 @@ pub use self::Result::Ok;
 /// See [`propagate`][crate] for more information.
 #[must_use = "this `Result` may be an `Err` variant, which should be handled"]
 #[derive(Debug)]
-pub enum Result<T, E> {
+pub enum Result<T, E, S: Traced = CodeLocationStack> {
     /// Contains the success value.
     Ok(T),
     /// Contains the error value wrapped in a [`ErrorStack`].
-    Err(ErrorStack<E>),
+    Err(ErrorStack<E, S>),
+}
+
+pub trait Traced {
+    fn trace(&mut self, location: &'static Location);
 }
 
 /*  _                 _   _____
@@ -69,14 +75,14 @@ impl<T, E> Try for Result<T, E> {
 }
 
 /// Pushes an entry to the stack when one [`Result`] is coerced to another using the `?` operator.
-impl<T, E, F: From<E>> FromResidual<Result<Infallible, E>> for Result<T, F> {
+impl<T, E, S: Traced, F: From<E>> FromResidual<Result<Infallible, E, S>> for Result<T, F, S> {
     #[inline]
     #[track_caller]
-    fn from_residual(residual: Result<Infallible, E>) -> Self {
+    fn from_residual(residual: Result<Infallible, E, S>) -> Self {
         match residual {
             Ok(_) => unreachable!(),
             Err(mut e) => {
-                e.push_caller();
+                e.stack.trace(Location::caller());
                 Err(e.convert_inner())
             }
         }
@@ -126,7 +132,7 @@ impl<T, E: std::error::Error> Termination for Result<T, E> {
  */
 
 /// Stuff not from the standard library.
-impl<T, E> Result<T, E> {
+impl<T, E, S: Traced + Default> Result<T, E, S> {
     /// Constructs a new error result from the provided error value.
     ///
     /// # Examples
@@ -147,7 +153,9 @@ impl<T, E> Result<T, E> {
     {
         Err(ErrorStack::new(E::from(error_value)))
     }
+}
 
+impl<T, E, S: Traced> Result<T, E, S> {
     /// Converts from `Result<T, E>` to [`std::result::Result<T, E>`].
     ///
     /// Converts `self` into a [`std::result::Result<T, E>`], consuming `self`.
@@ -199,7 +207,7 @@ impl<T, E> Result<T, E> {
     /// }
     /// ```
     #[inline]
-    pub fn err_stack(self) -> Option<ErrorStack<E>> {
+    pub fn err_stack(self) -> Option<ErrorStack<E, S>> {
         match self {
             Ok(_) => None,
             Err(x) => Some(x),

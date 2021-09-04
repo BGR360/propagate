@@ -2,7 +2,9 @@
 
 use std::fmt;
 use std::ops::Deref;
-use std::panic;
+use std::panic::{self, Location};
+
+use crate::result::Traced;
 
 /*   ____          _      _                    _   _
  *  / ___|___   __| | ___| |    ___   ___ __ _| |_(_) ___  _ __
@@ -80,8 +82,14 @@ impl fmt::Display for CodeLocation {
  */
 
 /// A stack of code locations.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Default)]
 pub struct CodeLocationStack(pub Vec<CodeLocation>);
+
+impl Traced for CodeLocationStack {
+    fn trace(&mut self, location: &'static panic::Location) {
+        self.0.push(location.into());
+    }
+}
 
 impl CodeLocationStack {
     pub fn to_strings(&self) -> Vec<String> {
@@ -130,12 +138,12 @@ impl fmt::Display for CodeLocationStack {
 /// }
 /// ```
 #[derive(Debug)]
-pub struct ErrorStack<E> {
+pub struct ErrorStack<E, S = CodeLocationStack> {
     pub(crate) error: E,
-    pub(crate) stack: CodeLocationStack,
+    pub(crate) stack: S,
 }
 
-impl<E> ErrorStack<E> {
+impl<E, S: Default + Traced> ErrorStack<E, S> {
     /// Constructs a new [`ErrorStack`] from the given error.
     ///
     /// The stack will contain the source location of the caller of this function. If that
@@ -144,13 +152,16 @@ impl<E> ErrorStack<E> {
     #[inline]
     #[track_caller]
     pub fn new(error: E) -> Self {
-        let loc = CodeLocation::from(panic::Location::caller());
-        Self {
+        let mut this = Self {
             error,
-            stack: CodeLocationStack(vec![loc]),
-        }
+            stack: Default::default(),
+        };
+        this.stack.trace(Location::caller());
+        this
     }
+}
 
+impl<E, S: Traced> ErrorStack<E, S> {
     /// Pushes the source location of the caller of this function onto the stack.
     ///
     /// If that function's caller is also annotated with `#[track_caller]`, then its location will
@@ -158,17 +169,16 @@ impl<E> ErrorStack<E> {
     #[inline]
     #[track_caller]
     pub fn push_caller(&mut self) {
-        let loc = CodeLocation::from(panic::Location::caller());
-        self.stack.0.push(loc);
+        self.stack.trace(Location::caller());
     }
 
     /// Returns the stack.
-    pub fn stack(&self) -> &CodeLocationStack {
+    pub fn stack(&self) -> &S {
         &self.stack
     }
 
     /// Converts the wrapped error from type `E` to type `F`.
-    pub(crate) fn convert_inner<F: From<E>>(self) -> ErrorStack<F> {
+    pub(crate) fn convert_inner<F: From<E>>(self) -> ErrorStack<F, S> {
         // N.B. I would implement this as `From<ErrorStack<E>> for ErrorStack<F>`,
         // but that conflicts with the blanket trait `From<T> for T` when `E` == `F`.
         ErrorStack {
@@ -178,7 +188,7 @@ impl<E> ErrorStack<E> {
     }
 }
 
-impl<E> Deref for ErrorStack<E> {
+impl<E, S> Deref for ErrorStack<E, S> {
     type Target = E;
 
     /// Returns a reference to the wrapped error.
