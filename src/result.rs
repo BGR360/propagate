@@ -12,6 +12,11 @@ use std::process::Termination;
 pub use self::Result::Err;
 pub use self::Result::Ok;
 
+/// A trait denoting "stack-like" types that can be used with [`Result<T, E, S>`].
+pub trait Traced {
+    fn trace(&mut self, location: &'static Location);
+}
+
 /*  ____                 _ _    _______   _______
  * |  _ \ ___  ___ _   _| | |_ / /_   _| | ____\ \
  * | |_) / _ \/ __| | | | | __/ /  | |   |  _|  \ \
@@ -31,10 +36,6 @@ pub enum Result<T, E, S: Traced = CodeLocationStack> {
     Ok(T),
     /// Contains the error value wrapped in a [`ErrorStack`].
     Err(ErrorStack<E, S>),
-}
-
-pub trait Traced {
-    fn trace(&mut self, location: &'static Location);
 }
 
 /*  _                 _   _____
@@ -101,6 +102,16 @@ impl<T, E, F: From<E>> FromResidual<std::result::Result<Infallible, E>> for Resu
     }
 }
 
+/*
+  _                 _   _____                   _             _   _
+ (_)_ __ ___  _ __ | | |_   _|__ _ __ _ __ ___ (_)_ __   __ _| |_(_) ___  _ __
+ | | '_ ` _ \| '_ \| |   | |/ _ \ '__| '_ ` _ \| | '_ \ / _` | __| |/ _ \| '_ \
+ | | | | | | | |_) | |   | |  __/ |  | | | | | | | | | | (_| | |_| | (_) | | | |
+ |_|_| |_| |_| .__/|_|   |_|\___|_|  |_| |_| |_|_|_| |_|\__,_|\__|_|\___/|_| |_|
+             |_|
+ FIGLET: impl Termination
+*/
+
 impl<T, E: std::error::Error> Termination for Result<T, E> {
     fn report(self) -> i32 {
         match self {
@@ -144,9 +155,6 @@ impl<T, E, S: Traced + Default> Result<T, E, S> {
     /// ```
     #[inline]
     #[track_caller]
-    // pub fn new_err(error_value: E) -> Self {
-    //     Err(ErrorStack::new(error_value))
-    // }
     pub fn new_err<D>(error_value: D) -> Self
     where
         E: From<D>,
