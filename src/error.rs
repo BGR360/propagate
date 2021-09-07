@@ -1,7 +1,6 @@
 //! Defines a new error type.
 
 use std::fmt;
-use std::ops::Deref;
 use std::panic::{self, Location};
 
 use crate::result::Traced;
@@ -143,6 +142,28 @@ pub struct ErrorStack<E, S = CodeLocationStack> {
     pub(crate) stack: S,
 }
 
+impl<E, S> ErrorStack<E, S> {
+    /// Returns the wrapped error.
+    pub fn error(&self) -> &E {
+        &self.error
+    }
+
+    /// Returns the traced stack.
+    pub fn stack(&self) -> &S {
+        &self.stack
+    }
+
+    /// Converts the wrapped error from type `E` to type `F`.
+    pub(crate) fn convert_inner<F: From<E>>(self) -> ErrorStack<F, S> {
+        // N.B. I would implement this as `From<ErrorStack<E>> for ErrorStack<F>`,
+        // but that conflicts with the blanket trait `From<T> for T` when `E` == `F`.
+        ErrorStack {
+            error: From::from(self.error),
+            stack: self.stack,
+        }
+    }
+}
+
 impl<E, S: Default + Traced> ErrorStack<E, S> {
     /// Constructs a new [`ErrorStack`] from the given error.
     ///
@@ -170,30 +191,6 @@ impl<E, S: Traced> ErrorStack<E, S> {
     #[track_caller]
     pub fn push_caller(&mut self) {
         self.stack.trace(Location::caller());
-    }
-
-    /// Returns the stack.
-    pub fn stack(&self) -> &S {
-        &self.stack
-    }
-
-    /// Converts the wrapped error from type `E` to type `F`.
-    pub(crate) fn convert_inner<F: From<E>>(self) -> ErrorStack<F, S> {
-        // N.B. I would implement this as `From<ErrorStack<E>> for ErrorStack<F>`,
-        // but that conflicts with the blanket trait `From<T> for T` when `E` == `F`.
-        ErrorStack {
-            error: From::from(self.error),
-            stack: self.stack,
-        }
-    }
-}
-
-impl<E, S> Deref for ErrorStack<E, S> {
-    type Target = E;
-
-    /// Returns a reference to the wrapped error.
-    fn deref(&self) -> &Self::Target {
-        &self.error
     }
 }
 

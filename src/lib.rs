@@ -240,7 +240,7 @@ pub mod result;
 #[doc(inline)]
 pub use self::{
     error::{CodeLocation, CodeLocationStack, ErrorStack},
-    result::Result,
+    result::{Result, Traced},
 };
 
 pub use self::result::Result::{Err, Ok};
@@ -248,7 +248,6 @@ pub use self::result::Result::{Err, Ok};
 pub mod prelude {
     pub use crate::error::ErrorStack;
     pub use crate::result::Result;
-    pub use crate::result::Result::Ok;
 }
 
 mod test;

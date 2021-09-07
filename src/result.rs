@@ -31,7 +31,7 @@ pub trait Traced {
 /// See [`propagate`][crate] for more information.
 #[must_use = "this `Result` may be an `Err` variant, which should be handled"]
 #[derive(Debug)]
-pub enum Result<T, E, S: Traced = CodeLocationStack> {
+pub enum Result<T, E, S = CodeLocationStack> {
     /// Contains the success value.
     Ok(T),
     /// Contains the error value wrapped in a [`ErrorStack`].
@@ -57,9 +57,9 @@ pub enum Result<T, E, S: Traced = CodeLocationStack> {
 /// Coercion between residual types is achieved by implementing the [`FromResidual`] trait.
 /// `Result` allows coercion from standard library results ([`std::result::Result`]) as well as
 /// from other `Result` instances whose inner error types are convertible from one to another.
-impl<T, E> Try for Result<T, E> {
+impl<T, E, S: Traced> Try for Result<T, E, S> {
     type Output = T;
-    type Residual = Result<Infallible, E>;
+    type Residual = Result<Infallible, E, S>;
 
     #[inline]
     fn from_output(output: Self::Output) -> Self {
@@ -76,14 +76,18 @@ impl<T, E> Try for Result<T, E> {
 }
 
 /// Pushes an entry to the stack when one [`Result`] is coerced to another using the `?` operator.
-impl<T, E, S: Traced, F: From<E>> FromResidual<Result<Infallible, E, S>> for Result<T, F, S> {
+impl<T, E, S, F> FromResidual<Result<Infallible, E, S>> for Result<T, F, S>
+where
+    S: Traced,
+    F: From<E>,
+{
     #[inline]
     #[track_caller]
     fn from_residual(residual: Result<Infallible, E, S>) -> Self {
         match residual {
             Ok(_) => unreachable!(),
             Err(mut e) => {
-                e.stack.trace(Location::caller());
+                e.push_caller();
                 Err(e.convert_inner())
             }
         }
@@ -91,7 +95,11 @@ impl<T, E, S: Traced, F: From<E>> FromResidual<Result<Infallible, E, S>> for Res
 }
 
 /// Starts a new stack when a [`std::result::Result`] is coerced to a [`Result`] using `?`.
-impl<T, E, F: From<E>> FromResidual<std::result::Result<Infallible, E>> for Result<T, F> {
+impl<T, E, S, F> FromResidual<std::result::Result<Infallible, E>> for Result<T, F, S>
+where
+    S: Traced + Default,
+    F: From<E>,
+{
     #[inline]
     #[track_caller]
     fn from_residual(residual: std::result::Result<Infallible, E>) -> Self {
@@ -112,20 +120,17 @@ impl<T, E, F: From<E>> FromResidual<std::result::Result<Infallible, E>> for Resu
  FIGLET: impl Termination
 */
 
-impl<T, E: std::error::Error> Termination for Result<T, E> {
+impl<T, E: std::error::Error, S: fmt::Display> Termination for Result<T, E, S> {
     fn report(self) -> i32 {
         match self {
             Ok(_) => 0,
             Err(err) => {
                 println!(
                     "Error: {}",
-                    trial_and_error::Report::new(&*err).pretty(true)
+                    trial_and_error::Report::new(err.error()).pretty(true)
                 );
 
-                let stack = err.stack();
-                if !stack.0.is_empty() {
-                    println!("\nReturn Trace: {}", err.stack());
-                }
+                println!("\nReturn Trace: {}", err.stack());
 
                 1
             }
