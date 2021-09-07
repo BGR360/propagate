@@ -1,7 +1,7 @@
 //! Helper class for testing.
 
 use crate::prelude::*;
-use crate::{CodeLocation, CodeLocationStack, ErrorStack};
+use crate::{CodeLocation, CodeLocationStack, TracedError};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -43,7 +43,7 @@ impl Fixture {
         assert_eq!(stack, &tags_to_locations);
     }
 
-    pub fn assert_error_has_stack<E>(&self, error: &ErrorStack<E>, tags: &[&'static str]) {
+    pub fn assert_error_has_stack<E>(&self, error: &TracedError<E>, tags: &[&'static str]) {
         let stack = error.stack();
         self.assert_stack_matches_tags(stack, tags);
     }

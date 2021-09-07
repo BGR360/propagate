@@ -3,7 +3,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io;
 
-use propagate::ErrorStack;
+use propagate::TracedError;
 
 #[derive(Debug)]
 enum MyError {
@@ -54,8 +54,8 @@ fn maybe_file_size(path: &str) -> propagate::Result<u64, MyError> {
     let lucky = (path.len() % 2) == 0;
 
     if !lucky {
-        // Option 2: Directly construct a `propagate::Result` using `ErrorStack::new()`.
-        propagate::Err(ErrorStack::new(MyError::Unlucky))
+        // Option 2: Directly construct a `propagate::Result` using `TracedError::new()`.
+        propagate::Err(TracedError::new(MyError::Unlucky))
     } else {
         propagate::Ok(file_size(path)?)
     }

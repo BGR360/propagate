@@ -165,15 +165,15 @@
 //! ```
 //! enum Result<T, E> {
 //!     Ok(T),
-//!     Err(ErrorStack<E>),
+//!     Err(TracedError<E>),
 //! }
 //! ```
 //!
-//! [`ErrorStack<E>`] is a wrapper around an arbitrary error value, and it stores a stack trace
+//! [`TracedError<E>`] is a wrapper around an arbitrary error value, and it stores a stack trace
 //! alongside the wrapped error value.
 //!
 //! Thus, when a `Result<T, E>` is equal to `Err(e)`, the value `e` is not of type `E`, but rather
-//! it is of type `ErrorStack<E>`.
+//! it is of type `TracedError<E>`.
 //!
 //! Because of this, if you want to pattern match a `Result<T, E>` and get a value of `E`, you
 //! must dereference the `Err(e)` value first:
@@ -192,14 +192,14 @@
 //!
 //! ## Creating Errors
 //!
-//! Because `Result<T, E>` is technically a `Result<T, ErrorStack<E>>`, you cannot construct a new
+//! Because `Result<T, E>` is technically a `Result<T, TracedError<E>>`, you cannot construct a new
 //! error result by simply doing `Err(error_value)`.
 //!
-//! You can coerce your error value into an `ErrorStack` in one of the following ways:
+//! You can coerce your error value into an `TracedError` in one of the following ways:
 //!
 //! ```
 //! // Directly
-//! let result: Result<(), u64> = Err(ErrorStack::new(42));
+//! let result: Result<(), u64> = Err(TracedError::new(42));
 //!
 //! // Using Result::new_err()
 //! let result: Result<(), u64> = Result::new_err(42);
@@ -239,14 +239,14 @@ pub mod result;
 
 #[doc(inline)]
 pub use self::{
-    error::{CodeLocation, CodeLocationStack, ErrorStack},
+    error::{CodeLocation, CodeLocationStack, TracedError},
     result::{Result, Traced},
 };
 
 pub use self::result::Result::{Err, Ok};
 
 pub mod prelude {
-    pub use crate::error::ErrorStack;
+    pub use crate::error::TracedError;
     pub use crate::result::Result;
 }
 

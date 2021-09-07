@@ -1,6 +1,6 @@
 //! Defines a new result type.
 
-use crate::error::ErrorStack;
+use crate::error::TracedError;
 use crate::CodeLocationStack;
 
 use std::convert::Infallible;
@@ -34,8 +34,8 @@ pub trait Traced {
 pub enum Result<T, E, S = CodeLocationStack> {
     /// Contains the success value.
     Ok(T),
-    /// Contains the error value wrapped in a [`ErrorStack`].
-    Err(ErrorStack<E, S>),
+    /// Contains the error value wrapped in a [`TracedError`].
+    Err(TracedError<E, S>),
 }
 
 /*  _                 _   _____
@@ -105,7 +105,7 @@ where
     fn from_residual(residual: std::result::Result<Infallible, E>) -> Self {
         match residual {
             std::result::Result::Ok(_) => unreachable!(),
-            std::result::Result::Err(e) => Err(ErrorStack::new(From::from(e))),
+            std::result::Result::Err(e) => Err(TracedError::new(From::from(e))),
         }
     }
 }
@@ -164,7 +164,7 @@ impl<T, E, S: Traced + Default> Result<T, E, S> {
     where
         E: From<D>,
     {
-        Err(ErrorStack::new(E::from(error_value)))
+        Err(TracedError::new(E::from(error_value)))
     }
 }
 
@@ -200,9 +200,9 @@ impl<T, E, S: Traced> Result<T, E, S> {
         }
     }
 
-    /// Converts from `Result<T, E>` to [`Option<ErrorStack<E>>`].
+    /// Converts from `Result<T, E>` to [`Option<TracedError<E>>`].
     ///
-    /// Converts `self` into an [`Option<ErrorStack<E>>`], consuming `self`,
+    /// Converts `self` into an [`Option<TracedError<E>>`], consuming `self`,
     /// and discarding the success value, if any.
     ///
     /// # Examples
@@ -220,7 +220,7 @@ impl<T, E, S: Traced> Result<T, E, S> {
     /// }
     /// ```
     #[inline]
-    pub fn err_stack(self) -> Option<ErrorStack<E, S>> {
+    pub fn err_stack(self) -> Option<TracedError<E, S>> {
         match self {
             Ok(_) => None,
             Err(x) => Some(x),
@@ -327,7 +327,7 @@ impl<T, E> Result<T, E> {
     // Adapter for working with references
     /////////////////////////////////////////////////////////////////////////
 
-    // TODO: how to do this? I think the returned result should have a `&T` or a `&ErrorStack<E>`,
+    // TODO: how to do this? I think the returned result should have a `&T` or a `&TracedError<E>`,
     // but idk how to make that happen.
     /*
     /// Converts from `&Result<T, E>` to `Result<&T, &E>`.
@@ -356,7 +356,7 @@ impl<T, E> Result<T, E> {
     */
 
     // TODO: how to do this? I think the returned result should have a `&mut T` or a
-    // `&mut ErrorStack<E>`, but idk how to make that happen.
+    // `&mut TracedError<E>`, but idk how to make that happen.
     /*
     /// Converts from `&mut Result<T, E>` to `Result<&mut T, &mut E>`.
     ///
@@ -423,7 +423,7 @@ impl<T, E> Result<T, E> {
         // `?` with whatever comes out of this.
         match self {
             Ok(t) => Ok(t),
-            Err(e) => Err(ErrorStack {
+            Err(e) => Err(TracedError {
                 error: op(e.error),
                 stack: e.stack,
             }),

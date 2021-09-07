@@ -111,7 +111,7 @@ impl fmt::Display for CodeLocationStack {
  * |  _| | '__| '__/ _ \| '__\___ \| __/ _` |/ __| |/ /
  * | |___| |  | | | (_) | |   ___) | || (_| | (__|   <
  * |_____|_|  |_|  \___/|_|  |____/ \__\__,_|\___|_|\_\
- *  FIGLET: ErrorStack
+ *  FIGLET: TracedError
  */
 
 /// A wrapper around a generic error type. Keeps track of a stack of code locations.
@@ -137,12 +137,12 @@ impl fmt::Display for CodeLocationStack {
 /// }
 /// ```
 #[derive(Debug)]
-pub struct ErrorStack<E, S = CodeLocationStack> {
+pub struct TracedError<E, S = CodeLocationStack> {
     pub(crate) error: E,
     pub(crate) stack: S,
 }
 
-impl<E, S> ErrorStack<E, S> {
+impl<E, S> TracedError<E, S> {
     /// Returns the wrapped error.
     pub fn error(&self) -> &E {
         &self.error
@@ -154,18 +154,18 @@ impl<E, S> ErrorStack<E, S> {
     }
 
     /// Converts the wrapped error from type `E` to type `F`.
-    pub(crate) fn convert_inner<F: From<E>>(self) -> ErrorStack<F, S> {
-        // N.B. I would implement this as `From<ErrorStack<E>> for ErrorStack<F>`,
+    pub(crate) fn convert_inner<F: From<E>>(self) -> TracedError<F, S> {
+        // N.B. I would implement this as `From<TracedError<E>> for TracedError<F>`,
         // but that conflicts with the blanket trait `From<T> for T` when `E` == `F`.
-        ErrorStack {
+        TracedError {
             error: From::from(self.error),
             stack: self.stack,
         }
     }
 }
 
-impl<E, S: Default + Traced> ErrorStack<E, S> {
-    /// Constructs a new [`ErrorStack`] from the given error.
+impl<E, S: Default + Traced> TracedError<E, S> {
+    /// Constructs a new [`TracedError`] from the given error.
     ///
     /// The stack will contain the source location of the caller of this function. If that
     /// function's caller is also annotated with `#[track_caller]`, then its location will be used
@@ -182,7 +182,7 @@ impl<E, S: Default + Traced> ErrorStack<E, S> {
     }
 }
 
-impl<E, S: Traced> ErrorStack<E, S> {
+impl<E, S: Traced> TracedError<E, S> {
     /// Pushes the source location of the caller of this function onto the stack.
     ///
     /// If that function's caller is also annotated with `#[track_caller]`, then its location will
@@ -212,7 +212,7 @@ mod test {
         let mut fix = Fixture::default();
 
         fix.tag_location("new", CodeLocation::here().down_by(1));
-        let mut err_stack = ErrorStack::new("oops");
+        let mut err_stack = TracedError::new("oops");
 
         fix.assert_error_has_stack(&err_stack, &["new"]);
 
