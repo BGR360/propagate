@@ -39,7 +39,8 @@ impl From<io::Error> for MyError {
 }
 
 fn file_size(path: &str) -> propagate::Result<u64, MyError> {
-    // `?` coerces `std::result::Result<_, io::Error>` into `propagate::Result<_, MyError>`.
+    // `?` coerces `std::result::Result<_, io::Error>`
+    // into `propagate::Result<_, MyError>`.
     let size = File::open(path)?.metadata()?.len();
 
     if size < 1024 {

@@ -1,23 +1,26 @@
 //! Error propagation tracing in Rust.
 //!
-//! This crate provides [`propagate::Result<T, E>`][crate::Result], a replacement for the standard
-//! library result type that automatically tracks the propagation of error results using the `?`
-//! operator.
+//! This crate provides [`propagate::Result<T, E>`][crate::Result], a
+//! replacement for the standard library result type that automatically tracks
+//! the propagation of error results using the `?` operator.
 //!
 //!
 //! # Propagation Tracing vs. Backtracing
 //!
-//! Being able to trace the cause of an error is critical for many types of software written in
-//! Rust. For easy diagnosis, errors should provide some sort of **trace** denoting source code
-//! locations that contributed to the error.
+//! Being able to trace the cause of an error is critical for many types of
+//! software written in Rust. For easy diagnosis, errors should provide some
+//! sort of **trace** denoting source code locations that contributed to the
+//! error.
 //!
-//! Crates such as [`anyhow`][anyhow] provide easy access to backtraces when creating errors. The
-//! `propagate` crate provides **propagation tracing**: every time the `?` operator is applied
-//! to an error result, the code location of that `?` invocation is appended to a running
-//! "stack trace" stored in the result.
+//! Crates such as [`anyhow`][anyhow] provide easy access to backtraces when
+//! creating errors. The `propagate` crate provides **propagation tracing**:
+//! every time the `?` operator is applied to an error result, the code location
+//! of that `?` invocation is appended to a running "stack trace" stored in the
+//! result.
 //!
-//! Propagation tracing differs from runtime backtracing in a few important ways. You should
-//! evaluate which approach is appropriate for your application.
+//! Propagation tracing differs from runtime backtracing in a few important
+//! ways. You should evaluate which approach is appropriate for your
+//! application.
 //!
 //! [anyhow]: https://docs.rs/anyhow/latest/anyhow/
 //!
@@ -26,32 +29,35 @@
 //!
 //! **Multithreaded tracing**
 //!
-//! A backtrace provides a single point-in-time capture of a call stack on a single thread.
-//! In complex software, error results may pass between multiple threads on their way up to their
-//! final consumers.
+//! A backtrace provides a single point-in-time capture of a call stack on a
+//! single thread. In complex software, error results may pass between multiple
+//! threads on their way up to their final consumers.
 //!
-//! Propagation tracing provides a true view into the path that an error takes through your code,
-//! even if it passes between multiple threads.
+//! Propagation tracing provides a true view into the path that an error takes
+//! through your code, even if it passes between multiple threads.
 //!
 //! **Low performance overhead**
 //!
-//! Runtime backtracing requires unwinding stacks and mapping addresses to source code locations
-//! symbols at runtime. With `propagate`, the information for each code location is compiled
-//! statically into your application's binary, and the stack trace is built up in real time as
-//! the error propagates from function to function.
+//! Runtime backtracing requires unwinding stacks and mapping addresses to
+//! source code locations symbols at runtime. With `propagate`, the information
+//! for each code location is compiled statically into your application's
+//! binary, and the stack trace is built up in real time as the error propagates
+//! from function to function.
 //!
 //!
 //! ## Disadvantages of Propagation Tracing
 //!
 //! **Code size**
 //!
-//! `propagate` stores code locations of `?` invocations in your application or library's binary.
+//! `propagate` stores code locations of `?` invocations in your application or
+//! library's binary.
 //!
 //! **Boilerplate**
 //!
-//! `propagate` results require a bit more attention to work with than std library results. Namely,
-//! you must use [`Result::new_err`] to construct new errors and must remember to use `Ok(..?)`
-//! when forwarding errors to other functions.
+//! `propagate` results require a bit more attention to work with than std
+//! library results. Namely, you must use [`Result::new_err`] to construct new
+//! errors and must remember to use `Ok(..?)` when forwarding errors to other
+//! functions.
 //!
 //!
 //! # Example
@@ -117,13 +123,13 @@
 //!
 //! # Propagation Using `?`
 //!
-//! After a [`Result<T, E>`] has been constructed, it will keep a running "stack trace" of the code
-//! locations where the `?` operator is invoked on it.
+//! After a [`Result<T, E>`] has been constructed, it will keep a running "stack
+//! trace" of the code locations where the `?` operator is invoked on it.
 //!
 //! ## Coercion Using `From`
 //!
-//! Any `Result<T, E>` can be coerced to a `Result<T, F>` using the `?` operator if there is a
-//! [`From<E>`] defined for type `F`:
+//! Any `Result<T, E>` can be coerced to a `Result<T, F>` using the `?` operator
+//! if there is a [`From<E>`] defined for type `F`:
 //!
 //! ```
 //! fn f() -> Result<(), String> {
@@ -134,8 +140,9 @@
 //!
 //! ## Coercion from `std::result::Result`
 //!
-//! To provide easy interoperability with standard library modules that return results, any
-//! [`std::result::Result<T, E>`] can be coerced to a `Result<T, E>` using the `?` operator:
+//! To provide easy interoperability with standard library modules that return
+//! results, any [`std::result::Result<T, E>`] can be coerced to a
+//! `Result<T, E>` using the `?` operator:
 //!
 //! ```
 //! fn f() -> Result<(), io::Error> {
@@ -144,7 +151,8 @@
 //! }
 //! ```
 //!
-//! You can also coerce `std::result::Result<T, E>` to `Result<T, F>` if `F: From<E>`:
+//! You can also coerce `std::result::Result<T, E>` to `Result<T, F>` if `F:
+//! From<E>`:
 //!
 //! ```
 //! fn f() -> Result<(), String> {
@@ -156,7 +164,8 @@
 //!
 //! # Working with `Result<T, E>`
 //!
-//! There are a few caveats when using [`Result<T, E>`] as a replacement for the std library result.
+//! There are a few caveats when using [`Result<T, E>`] as a replacement for the
+//! std library result.
 //!
 //! ## Contained Value
 //!
@@ -169,14 +178,14 @@
 //! }
 //! ```
 //!
-//! [`TracedError<E>`] is a wrapper around an arbitrary error value, and it stores a stack trace
-//! alongside the wrapped error value.
+//! [`TracedError<E>`] is a wrapper around an arbitrary error value, and it
+//! stores a stack trace alongside the wrapped error value.
 //!
-//! Thus, when a `Result<T, E>` is equal to `Err(e)`, the value `e` is not of type `E`, but rather
-//! it is of type `TracedError<E>`.
+//! Thus, when a `Result<T, E>` is equal to `Err(e)`, the value `e` is not of
+//! type `E`, but rather it is of type `TracedError<E>`.
 //!
-//! Because of this, if you want to pattern match a `Result<T, E>` and get a value of `E`, you
-//! must dereference the `Err(e)` value first:
+//! Because of this, if you want to pattern match a `Result<T, E>` and get a
+//! value of `E`, you must dereference the `Err(e)` value first:
 //!
 //! ```
 //! let result: Result<(), String> = function_that_returns_result();
@@ -192,10 +201,11 @@
 //!
 //! ## Creating Errors
 //!
-//! Because `Result<T, E>` is technically a `Result<T, TracedError<E>>`, you cannot construct a new
-//! error result by simply doing `Err(error_value)`.
+//! Because `Result<T, E>` is technically a `Result<T, TracedError<E>>`, you
+//! cannot construct a new error result by simply doing `Err(error_value)`.
 //!
-//! You can coerce your error value into an `TracedError` in one of the following ways:
+//! You can coerce your error value into an `TracedError` in one of the
+//! following ways:
 //!
 //! ```
 //! // Directly
@@ -207,9 +217,9 @@
 //!
 //! ## **IMPORTANT**: Forwarding Errors
 //!
-//! You must remember to surround result values with `Ok(..?)` when returning them in a function.
-//! The compiler will not force you to do this if the result value's type is identical
-//! to the function's return type.
+//! You must remember to surround result values with `Ok(..?)` when returning
+//! them in a function. The compiler will not force you to do this if the result
+//! value's type is identical to the function's return type.
 //!
 //! ```
 //! fn gives_error() -> Result<(), &str> {

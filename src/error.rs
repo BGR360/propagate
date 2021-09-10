@@ -40,7 +40,8 @@ impl CodeLocation {
         Self::from(panic::Location::caller())
     }
 
-    /// Returns the `CodeLocation` that is `lines` lines below `self`, consuming `self`.
+    /// Returns the `CodeLocation` that is `lines` lines below `self`,
+    /// consuming `self`.
     ///
     /// # Example
     ///
@@ -114,7 +115,8 @@ impl fmt::Display for CodeLocationStack {
  *  FIGLET: TracedError
  */
 
-/// A wrapper around a generic error type. Keeps track of a stack of code locations.
+/// A wrapper around a generic error type. Keeps track of a stack of code
+/// locations.
 ///
 /// # Example
 ///
@@ -155,8 +157,9 @@ impl<E, S> TracedError<E, S> {
 
     /// Converts the wrapped error from type `E` to type `F`.
     pub(crate) fn convert_inner<F: From<E>>(self) -> TracedError<F, S> {
-        // N.B. I would implement this as `From<TracedError<E>> for TracedError<F>`,
-        // but that conflicts with the blanket trait `From<T> for T` when `E` == `F`.
+        // N.B. I would implement this as `From<TracedError<E>> for
+        // TracedError<F>`, but that conflicts with the blanket trait
+        // `From<T> for T` when `E` == `F`.
         TracedError {
             error: From::from(self.error),
             stack: self.stack,
@@ -167,9 +170,10 @@ impl<E, S> TracedError<E, S> {
 impl<E, S: Default + Traced> TracedError<E, S> {
     /// Constructs a new [`TracedError`] from the given error.
     ///
-    /// The stack will contain the source location of the caller of this function. If that
-    /// function's caller is also annotated with `#[track_caller]`, then its location will be used
-    /// instead, and so on up the stack to the first call within a non-tracked function.
+    /// The stack will contain the source location of the caller of this
+    /// function. If that function's caller is also annotated with
+    /// `#[track_caller]`, then its location will be used instead, and so on up
+    /// the stack to the first call within a non-tracked function.
     #[inline]
     #[track_caller]
     pub fn new(error: E) -> Self {
@@ -183,10 +187,12 @@ impl<E, S: Default + Traced> TracedError<E, S> {
 }
 
 impl<E, S: Traced> TracedError<E, S> {
-    /// Pushes the source location of the caller of this function onto the stack.
+    /// Pushes the source location of the caller of this function onto the
+    /// stack.
     ///
-    /// If that function's caller is also annotated with `#[track_caller]`, then its location will
-    /// be used instead, and so on up the stack to the first call within a non-tracked function.
+    /// If that function's caller is also annotated with `#[track_caller]`, then
+    /// its location will be used instead, and so on up the stack to the first
+    /// call within a non-tracked function.
     #[inline]
     #[track_caller]
     pub fn push_caller(&mut self) {

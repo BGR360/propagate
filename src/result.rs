@@ -49,14 +49,16 @@ pub enum Result<T, E, S = CodeLocationStack> {
 
 /// Overriding the try operator `?` for [`Result`].
 ///
-/// Invoking the `?` operator invokes [`Self::branch()`] under the hood. This function returns a
-/// [`ControlFlow`] enum which dictates whether the execution will continue forward (i.e., `Ok()`),
-/// or break early (i.e., `Err()`). The value produced when continuing is the `Output`, and the
-/// value produced when breaking early is called the `Residual`.
+/// Invoking the `?` operator invokes [`Self::branch()`] under the hood. This
+/// function returns a [`ControlFlow`] enum which dictates whether the execution
+/// will continue forward (i.e., `Ok()`), or break early (i.e., `Err()`). The
+/// value produced when continuing is the `Output`, and the value produced when
+/// breaking early is called the `Residual`.
 ///
-/// Coercion between residual types is achieved by implementing the [`FromResidual`] trait.
-/// `Result` allows coercion from standard library results ([`std::result::Result`]) as well as
-/// from other `Result` instances whose inner error types are convertible from one to another.
+/// Coercion between residual types is achieved by implementing the
+/// [`FromResidual`] trait. `Result` allows coercion from standard library
+/// results ([`std::result::Result`]) as well as from other `Result` instances
+/// whose inner error types are convertible from one to another.
 impl<T, E, S: Traced> Try for Result<T, E, S> {
     type Output = T;
     type Residual = Result<Infallible, E, S>;
