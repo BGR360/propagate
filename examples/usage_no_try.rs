@@ -44,7 +44,8 @@ fn file_size(path: &str) -> propagate::Result<u64, MyError> {
     let size = File::open(path)?.metadata()?.len();
 
     if size < 1024 {
-        // Option 1: Coerce a `std::result::Result` to a `propagate::Result` using `?`.
+        // Option 1: Coerce a `std::result::Result` to a`propagate::Result`
+        // using `?`.
         Err(MyError::TooSmall(size))?
     } else {
         propagate::Ok(size)
@@ -55,7 +56,8 @@ fn maybe_file_size(path: &str) -> propagate::Result<u64, MyError> {
     let lucky = (path.len() % 2) == 0;
 
     if !lucky {
-        // Option 2: Directly construct a `propagate::Result` using `TracedError::new()`.
+        // Option 2: Directly construct a `propagate::Result`
+        // using `TracedError::new()`.
         propagate::Err(TracedError::new(MyError::Unlucky))
     } else {
         propagate::Ok(file_size(path)?)
