@@ -37,7 +37,8 @@ pub fn err<T, E, S: Traced + Default, F: From<E>>(err_value: E) -> Result<T, F, 
  *  FIGLET: Result<T, E>
  */
 
-/// A wrapper around [`std::result::Result<T, E>`] that supports chaining via the `?` operator.
+/// A wrapper around [`std::result::Result`] that supports chaining via the `?`
+/// operator.
 ///
 /// TODO: document custom stack types.
 ///
@@ -52,10 +53,10 @@ pub fn err<T, E, S: Traced + Default, F: From<E>>(err_value: E) -> Result<T, F, 
 /// using the `?` operator if there is a [`From<E>`] defined for type `F`:
 ///
 /// ```
-/// use propagate::Result;
-/// fn f() -> Result<(), String> {
-///     let result: Result<(), &str> = Result::new_err("str slice");
-///     propagate::Ok(result?)
+/// fn f() -> propagate::Result<(), String> {
+///     let result: propagate::Result<(), &str> =
+///         propagate::err("str slice");
+///     propagate::ok(result?)
 /// }
 /// ```
 ///
@@ -66,12 +67,11 @@ pub fn err<T, E, S: Traced + Default, F: From<E>>(err_value: E) -> Result<T, F, 
 /// `propagate::Result` using the `?` operator:
 ///
 /// ```
-/// use propagate::Result;
 /// use std::fs::File;
-/// fn f() -> Result<File, std::io::Error> {
-///     let result: std::result::Result<File, std::io::Error> =
+/// fn f() -> propagate::Result<File, std::io::Error> {
+///     let result: Result<File, std::io::Error> =
 ///         File::open("foo.txt");
-///     propagate::Ok(result?)
+///     propagate::ok(result?)
 /// }
 /// ```
 ///
@@ -79,10 +79,9 @@ pub fn err<T, E, S: Traced + Default, F: From<E>>(err_value: E) -> Result<T, F, 
 /// if there is a [`From<E>`] defined for type `F`.
 ///
 /// ```
-/// use propagate::Result;
-/// fn f() -> Result<(), String> {
-///     let result: std::result::Result<(), &str> = Err("string slice");
-///     propagate::Ok(result?)
+/// fn f() -> propagate::Result<(), String> {
+///     let result: Result<(), &str> = Err("string slice");
+///     propagate::ok(result?)
 /// }
 /// ```
 ///
@@ -94,37 +93,26 @@ pub fn err<T, E, S: Traced + Default, F: From<E>>(err_value: E) -> Result<T, F, 
 ///
 /// ## Contained Value
 ///
-/// `propagate::Result` is defined as such;
-///
-/// ```
-/// # use propagate::error::TracedError;
-/// enum Result<T, E> {
-///     Ok(T),
-///     Err(TracedError<E>),
-/// }
-/// ```
+/// `propagate::Result<T, E>` is an opaque wrapper around a
+/// [`std::result::Result<T, TracedError<E>>`].
 ///
 /// [`TracedError`] is a wrapper around an arbitrary error value, and it stores
-/// a stack trace alongside the wrapped error value.
+/// an error trace alongside the wrapped error value.
 ///
-/// Thus, when a `propagate::Result` is equal to `Err(e)`, the value `e` is not
-/// of type `E`, but rather it is of type `TracedError<E>`.
-///
-/// Because of this, if you want to pattern match a `Result<T, E>` and get a
-/// value of `E`, you must call [`error()`][crate::TracedError::error()] on the
-/// the `Err(e)` value first:
+/// To access the wrapped result type, as well as any associated error trace,
+/// use [`unpack()`][crate::Result::unpack()]:
 ///
 /// ```
 /// # fn function_that_returns_result() -> propagate::Result<(), String> {
-/// #     propagate::Result::new_err("a")
+/// #     propagate::err("a")
 /// # }
 /// let result: propagate::Result<(), String> = function_that_returns_result();
-/// match result {
-///     propagate::Ok(_) => {}
-///     propagate::Err(e) => {
-///         println!("stack: {}", e.stack());
-///         let inner: &String = e.error();
-///         println!("inner: {}", inner);
+/// let (inner_result, stack) = result.unpack();
+/// match inner_result {
+///     Ok(_) => {}
+///     Err(e) => {
+///         println!("stack: {}", stack.unwrap());
+///         println!("inner: {}", e);
 ///     }
 /// }
 /// ```
@@ -134,23 +122,26 @@ pub fn err<T, E, S: Traced + Default, F: From<E>>(err_value: E) -> Result<T, F, 
 /// Because `Result<T, E>` is technically a `Result<T, TracedError<E>>`, you
 /// cannot construct a new error result by simply doing `Err(error_value)`.
 ///
-/// You can turn your error value into a `TracedError` in one of the
-/// following ways:
+/// You can turn your error value into a `TracedError` in one of the following
+/// ways:
+///
+/// 1. Directly, using `propagate::err()`:
 ///
 /// ```
-/// use propagate::{Result, TracedError};
+/// let result: propagate::Result<(), i32> = propagate::err(42);
+/// ```
 ///
-/// // Directly
-/// let result: Result<(), i32> = propagate::Err(TracedError::new(42));
+/// 2. Using `?` in a `try` block:
 ///
-/// // Using Result::new_err()
-/// let result: Result<(), i32> = Result::new_err(42);
+/// ```
+/// #![feature(try_blocks)]
+/// let result: propagate::Result<(), i32> = try { Err(42)? };
 /// ```
 ///
 /// ## **IMPORTANT**: Forwarding Errors
 ///
 /// When not using `try` blocks, you must remember to surround result values
-/// with `Ok(..?)` when returning them in a function. The compiler will not
+/// with `ok(..?)` when returning them in a function. The compiler will not
 /// force you to do this if the result value's type is identical to the
 /// function's return type.
 ///
@@ -158,13 +149,13 @@ pub fn err<T, E, S: Traced + Default, F: From<E>>(err_value: E) -> Result<T, F, 
 /// use propagate::Result;
 ///
 /// fn gives_error() -> Result<(), &'static str> {
-///     Result::new_err("Nothing here")
+///     propagate::err("Nothing here")
 /// }
 ///
 /// // YES: Result surrounded by Ok(..?), so the stack trace will include foo()
 /// fn foo() -> Result<(), &'static str> {
 ///     let result = gives_error();
-///     propagate::Ok(result?)
+///     propagate::ok(result?)
 /// }
 ///
 /// // NO: Result returned directly, so the stack trace will not include bar()
@@ -181,7 +172,7 @@ pub fn err<T, E, S: Traced + Default, F: From<E>>(err_value: E) -> Result<T, F, 
 /// #![feature(try_blocks)]
 /// # use propagate::Result;
 /// # fn gives_error() -> Result<(), &'static str> {
-/// #     Result::new_err("Nothing here")
+/// #     propagate::err("Nothing here")
 /// # }
 /// // YES
 /// fn foo() -> Result<(), &'static str> {
@@ -196,7 +187,7 @@ pub fn err<T, E, S: Traced + Default, F: From<E>>(err_value: E) -> Result<T, F, 
 /// #![feature(try_blocks)]
 /// # use propagate::Result;
 /// # fn gives_error() -> Result<(), &'static str> {
-/// #     Result::new_err("Nothing here")
+/// #     propagate::err("Nothing here")
 /// # }
 /// // NO: will not compile
 /// fn bar() -> Result<(), &'static str> {
@@ -209,7 +200,7 @@ pub fn err<T, E, S: Traced + Default, F: From<E>>(err_value: E) -> Result<T, F, 
 /// fn baz() -> Result<(), &'static str> {
 ///     try {
 ///         let result = gives_error();
-///         propagate::Ok(result?)
+///         propagate::ok(result?)
 ///     }
 /// }
 /// ```
