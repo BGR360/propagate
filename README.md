@@ -1,6 +1,6 @@
 # Propagate
 
-Error propagation tracking in Rust.
+Error propagation tracing in Rust.
 
 ## Documentation
 

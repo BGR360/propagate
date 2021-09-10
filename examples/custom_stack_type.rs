@@ -19,7 +19,7 @@ mod custom {
         }
     }
 
-    // Required for propagation tracking.
+    // Required for propagation tracing.
     impl propagate::Traced for CustomStack {
         fn trace(&mut self, location: &'static std::panic::Location) {
             let as_string = format!("{}:{}", location.file(), location.line());

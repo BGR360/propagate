@@ -1,36 +1,36 @@
-//! Error propagation tracking in Rust.
+//! Error propagation tracing in Rust.
 //!
 //! This crate provides [`propagate::Result<T, E>`][crate::Result], a replacement for the standard
 //! library result type that automatically tracks the propagation of error results using the `?`
 //! operator.
 //!
 //!
-//! # Propagation Tracking vs. Backtracing
+//! # Propagation Tracing vs. Backtracing
 //!
 //! Being able to trace the cause of an error is critical for many types of software written in
 //! Rust. For easy diagnosis, errors should provide some sort of **trace** denoting source code
 //! locations that contributed to the error.
 //!
 //! Crates such as [`anyhow`][anyhow] provide easy access to backtraces when creating errors. The
-//! `propagate` crate provides **propagation tracking**: every time the `?` operator is applied
+//! `propagate` crate provides **propagation tracing**: every time the `?` operator is applied
 //! to an error result, the code location of that `?` invocation is appended to a running
 //! "stack trace" stored in the result.
 //!
-//! Propagation tracking differs from runtime backtracing in a few important ways. You should
+//! Propagation tracing differs from runtime backtracing in a few important ways. You should
 //! evaluate which approach is appropriate for your application.
 //!
 //! [anyhow]: https://docs.rs/anyhow/latest/anyhow/
 //!
 //!
-//! ## Advantages of Propagation Tracking
+//! ## Advantages of Propagation Tracing
 //!
-//! **Multithreaded tracking**
+//! **Multithreaded tracing**
 //!
 //! A backtrace provides a single point-in-time capture of a call stack on a single thread.
 //! In complex software, error results may pass between multiple threads on their way up to their
 //! final consumers.
 //!
-//! Propagation tracking provides a true view into the path that an error takes through your code,
+//! Propagation tracing provides a true view into the path that an error takes through your code,
 //! even if it passes between multiple threads.
 //!
 //! **Low performance overhead**
@@ -41,7 +41,7 @@
 //! the error propagates from function to function.
 //!
 //!
-//! ## Disadvantages of Propagation Tracking
+//! ## Disadvantages of Propagation Tracing
 //!
 //! **Code size**
 //!
