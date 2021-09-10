@@ -3,8 +3,6 @@ use std::error::Error;
 use std::fs::File;
 use std::io;
 
-use propagate::TracedError;
-
 #[derive(Debug)]
 enum MyError {
     Unlucky,
@@ -48,7 +46,7 @@ fn file_size(path: &str) -> propagate::Result<u64, MyError> {
         // using `?`.
         Err(MyError::TooSmall(size))?
     } else {
-        propagate::Ok(size)
+        propagate::ok(size)
     }
 }
 
@@ -57,15 +55,15 @@ fn maybe_file_size(path: &str) -> propagate::Result<u64, MyError> {
 
     if !lucky {
         // Option 2: Directly construct a `propagate::Result`
-        // using `TracedError::new()`.
-        propagate::Err(TracedError::new(MyError::Unlucky))
+        // using `propagate::err()`.
+        propagate::err(MyError::Unlucky)
     } else {
-        propagate::Ok(file_size(path)?)
+        propagate::ok(file_size(path)?)
     }
 }
 
 fn main() -> propagate::Result<(), MyError> {
     let size = maybe_file_size("foo.txt")?;
     println!("File size: {} KiB", size / 1024);
-    propagate::Ok(())
+    propagate::ok(())
 }

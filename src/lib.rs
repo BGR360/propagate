@@ -152,14 +152,7 @@ pub mod result;
 #[doc(inline)]
 pub use self::{
     error::{CodeLocation, CodeLocationStack, TracedError},
-    result::{Result, Traced},
+    result::{err, ok, Result, Traced},
 };
-
-pub use self::result::Result::{Err, Ok};
-
-pub mod prelude {
-    pub use crate::error::TracedError;
-    pub use crate::result::Result;
-}
 
 mod test;
