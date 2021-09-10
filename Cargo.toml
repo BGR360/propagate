@@ -7,6 +7,3 @@ description = "Error propagation tracing in Rust."
 
 [dependencies]
 trial-and-error = { git = "https://github.com/yaahc/trial-and-error" }
-
-[lib]
-doctest = false

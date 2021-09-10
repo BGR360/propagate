@@ -1,7 +1,7 @@
 //! Defines a new error type.
 
 use std::fmt;
-use std::panic::{self, Location};
+use std::panic;
 
 use crate::result::Traced;
 
@@ -29,7 +29,8 @@ impl CodeLocation {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
+    /// # use propagate::error::*;
     /// // begin file: foo.rs
     /// let loc = CodeLocation::here();
     /// assert_eq!(format!("{}", &loc), "foo.rs:1");
@@ -45,7 +46,8 @@ impl CodeLocation {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
+    /// # use propagate::error::*;
     /// // begin file: foo.rs
     /// let loc = CodeLocation::here().down_by(1);
     /// assert_eq!(format!("{}", &loc), "foo.rs:2");
@@ -82,7 +84,7 @@ impl fmt::Display for CodeLocation {
  */
 
 /// A stack of code locations.
-#[derive(Debug, Eq, PartialEq, Default)]
+#[derive(PartialEq, Eq, Default, Debug)]
 pub struct CodeLocationStack(pub Vec<CodeLocation>);
 
 impl Traced for CodeLocationStack {
@@ -107,38 +109,53 @@ impl fmt::Display for CodeLocationStack {
     }
 }
 
-/*  _____                     ____  _             _
- * | ____|_ __ _ __ ___  _ __/ ___|| |_ __ _  ___| | __
- * |  _| | '__| '__/ _ \| '__\___ \| __/ _` |/ __| |/ /
- * | |___| |  | | | (_) | |   ___) | || (_| | (__|   <
- * |_____|_|  |_|  \___/|_|  |____/ \__\__,_|\___|_|\_\
- *  FIGLET: TracedError
- */
+/*
+  _____                       _ _____
+ |_   _| __ __ _  ___ ___  __| | ____|_ __ _ __ ___  _ __
+   | || '__/ _` |/ __/ _ \/ _` |  _| | '__| '__/ _ \| '__|
+   | || | | (_| | (_|  __/ (_| | |___| |  | | | (_) | |
+   |_||_|  \__,_|\___\___|\__,_|_____|_|  |_|  \___/|_|
 
-/// A wrapper around a generic error type. Keeps track of a stack of code
-/// locations.
+    FIGLET: TracedError
+*/
+
+/// A wrapper around a generic error type that stores an error trace.
 ///
-/// # Example
+/// # Custom Trace Type
+///
+/// The trace type `S` can be customized if you would like to customize how code
+/// locations are stored or processed.
+///
+/// # Examples
+///
+/// Typically you would not work with `TracedError` manually, but the following
+/// example illustrates the tracing behavior of `TracedError`:
 ///
 /// ```
-/// use propagate::result::*;
-/// use std::{fs, io};
+/// # use propagate::error::*;
 ///
-/// fn file_size(path: &str) -> Result<u64, io::Error> {
-///     let size = fs::File::open(path)?.metadata()?.len();
-///     Ok(size)
+/// fn foo() -> TracedError<&'static str> {
+///     // Create new error with foo() at the start of the error trace.
+///     TracedError::new("Nothing here")
 /// }
 ///
-/// let result = file_size("foo.txt");
-/// match result {
-///     Ok(size) => println!("File size: {} bytes", size),
-///     Err(err) => {
-///         println!("Call stack: {}", err.stack());
-///         println!("I/O Error: {:?}", *err);
-///     }
+/// fn bar() -> TracedError<&'static str> {
+///     let mut error = foo();
+///     // Add bar() to the error trace.
+///     error.push_caller();
+///     error
 /// }
+///
+/// let traced_error = bar();
+/// let error: &str = traced_error.error();
+/// let stack: &CodeLocationStack = traced_error.stack();
+/// assert_eq!(error, "Nothing here");
+/// assert_eq!(stack.0.len(), 2);
 /// ```
-#[derive(Debug)]
+///
+/// And here's an example of using a custom trace type:
+///
+#[derive(PartialEq, Eq, Debug, Hash)]
 pub struct TracedError<E, S = CodeLocationStack> {
     pub(crate) error: E,
     pub(crate) stack: S,
@@ -156,6 +173,8 @@ impl<E, S> TracedError<E, S> {
     }
 
     /// Converts the wrapped error from type `E` to type `F`.
+    ///
+    /// The error trace is not modified.
     pub(crate) fn convert_inner<F: From<E>>(self) -> TracedError<F, S> {
         // N.B. I would implement this as `From<TracedError<E>> for
         // TracedError<F>`, but that conflicts with the blanket trait
@@ -174,6 +193,16 @@ impl<E, S: Default + Traced> TracedError<E, S> {
     /// function. If that function's caller is also annotated with
     /// `#[track_caller]`, then its location will be used instead, and so on up
     /// the stack to the first call within a non-tracked function.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// # use propagate::error::*;
+    /// let e: TracedError<&str> = TracedError::new("Nothing here");
+    /// assert_eq!(e.stack().0.len(), 1);
+    /// ```
     #[inline]
     #[track_caller]
     pub fn new(error: E) -> Self {
@@ -181,7 +210,7 @@ impl<E, S: Default + Traced> TracedError<E, S> {
             error,
             stack: Default::default(),
         };
-        this.stack.trace(Location::caller());
+        this.stack.trace(panic::Location::caller());
         this
     }
 }
@@ -193,10 +222,28 @@ impl<E, S: Traced> TracedError<E, S> {
     /// If that function's caller is also annotated with `#[track_caller]`, then
     /// its location will be used instead, and so on up the stack to the first
     /// call within a non-tracked function.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// # use propagate::error::*;
+    /// let loc0 = CodeLocation::here().down_by(1);
+    /// let mut e: TracedError<&str> = TracedError::new("Nothing here");
+    ///
+    /// let loc1 = CodeLocation::here().down_by(1);
+    /// e.push_caller();
+    ///
+    /// let loc2 = CodeLocation::here().down_by(1);
+    /// e.push_caller();
+    ///
+    /// assert_eq!(e.stack().0, vec![loc0, loc1, loc2]);
+    /// ```
     #[inline]
     #[track_caller]
     pub fn push_caller(&mut self) {
-        self.stack.trace(Location::caller());
+        self.stack.trace(panic::Location::caller());
     }
 }
 
