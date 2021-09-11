@@ -143,10 +143,8 @@
 
 // TODO:
 // * Add a feature flag to fall back to standard library results.
-// * Move `CodeLocation` and `CodeLocationStack` to `test`
-// * Move `Traced` to `error`.
-// * Rename `stack` to `trace`?
-// * look into `[rustc_diagnostic_item = "result_type"]`
+// * Massage `CodeLocation` and `CodeLocationStack` a bit.
+// * Improve crate-level docs a bit.
 
 pub mod error;
 pub mod result;
