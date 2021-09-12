@@ -1,7 +1,5 @@
 #![feature(try_blocks)]
 
-use propagate::CodeLocationStack;
-
 #[derive(Debug)]
 enum MyError {
     Str(&'static str),
@@ -18,18 +16,18 @@ fn maybe_int() -> propagate::Result<u32, MyError> {
 }
 
 fn main() {
-    let result = maybe_int();
+    let (result, stack) = maybe_int().unpack();
     match result {
-        propagate::Ok(i) => println!("Got int: {}", i),
-        propagate::Err(e) => {
-            let error: &MyError = e.error();
-            match error {
+        Ok(i) => {
+            println!("Got int: {}", i);
+            assert!(matches!(stack, None));
+        }
+        Err(e) => {
+            match e {
                 MyError::Str(s) => println!("Error: {}", s),
                 MyError::Other => println!("Error (other)"),
             }
-
-            let stack: &CodeLocationStack = e.stack();
-            println!("\nStack: {}", stack);
+            println!("\nStack: {}", stack.unwrap());
         }
     }
 }

@@ -1,6 +1,6 @@
 //! Error propagation tracing in Rust.
 //!
-//! This crate provides [`propagate::Result`], a replacement for the standard
+//! This crate provides [`propagate::Result`], a wrapper around the standard
 //! library result type that automatically tracks the propagation of error
 //! results using the `?` operator.
 //!
@@ -74,16 +74,16 @@
 //! }
 //!
 //! # fn main() {
-//! #     let result = maybe_file_size("foo.txt");
+//! #     let (result, stack) = maybe_file_size("foo.txt").unpack();
 //! #     match result {
-//! #         propagate::Ok(size) => println!("File size: {} KiB", size / 1024),
-//! #         propagate::Err(err) => {
-//! #             match err.error() {
+//! #         Ok(size) => println!("File size: {} KiB", size / 1024),
+//! #         Err(err) => {
+//! #             match err {
 //! #                 MyError::Unlucky => println!("Not this time!"),
 //! #                 MyError::Io(e) => println!("I/O error: {}", e),
 //! #                 MyError::TooSmall(size) => println!("File too small: {} bytes", size),
 //! #             }
-//! #             println!("Backtrace: {}", err.stack());
+//! #             println!("Backtrace: {}", stack.unwrap());
 //! #         }
 //! #     }
 //! # }
@@ -113,11 +113,9 @@
 //!     let size = File::open(path)?.metadata()?.len();
 //!
 //!     if size < 1024 {
-//!         // Option 1: Coerce a `std::result::Result` to a`propagate::Result`
-//!         // using `?`.
-//!         Err(MyError::TooSmall(size))?
+//!         propagate::err(MyError::TooSmall(size))
 //!     } else {
-//!         propagate::Ok(size)
+//!         propagate::ok(size)
 //!     }
 //! }
 //!
@@ -125,12 +123,10 @@
 //!     let lucky = (path.len() % 2) == 0;
 //!
 //!     if !lucky {
-//!         // Option 2: Directly construct a `propagate::Result`
-//!         // using `Result::new_err()`.
-//!         propagate::Result::new_err(MyError::Unlucky)
+//!         propagate::err(MyError::Unlucky)
 //!     } else {
-//!         // Must remember to surround with `Ok(..?)`.
-//!         propagate::Ok(file_size(path)?)
+//!         // Must remember to surround with `ok(..?)`.
+//!         propagate::ok(file_size(path)?)
 //!     }
 //! }
 //! ```
@@ -152,14 +148,7 @@ pub mod result;
 #[doc(inline)]
 pub use self::{
     error::{CodeLocation, CodeLocationStack, TracedError},
-    result::{Result, Traced},
+    result::{err, ok, Result, Traced},
 };
-
-pub use self::result::Result::{Err, Ok};
-
-pub mod prelude {
-    pub use crate::error::TracedError;
-    pub use crate::result::Result;
-}
 
 mod test;
