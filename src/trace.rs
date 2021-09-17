@@ -78,25 +78,27 @@ impl fmt::Display for CodeLocation {
     }
 }
 
-/*   ____          _      _                    _   _             ____  _             _
- *  / ___|___   __| | ___| |    ___   ___ __ _| |_(_) ___  _ __ / ___|| |_ __ _  ___| | __
- * | |   / _ \ / _` |/ _ \ |   / _ \ / __/ _` | __| |/ _ \| '_ \\___ \| __/ _` |/ __| |/ /
- * | |__| (_) | (_| |  __/ |__| (_) | (_| (_| | |_| | (_) | | | |___) | || (_| | (__|   <
- *  \____\___/ \__,_|\___|_____\___/ \___\__,_|\__|_|\___/|_| |_|____/ \__\__,_|\___|_|\_\
- *  FIGLET: CodeLocationStack
- */
+/*
+  _____                    _____
+ | ____|_ __ _ __ ___  _ _|_   _| __ __ _  ___ ___
+ |  _| | '__| '__/ _ \| '__|| || '__/ _` |/ __/ _ \
+ | |___| |  | | | (_) | |   | || | | (_| | (_|  __/
+ |_____|_|  |_|  \___/|_|   |_||_|  \__,_|\___\___|
 
-/// A stack of code locations.
+ FIGLET: ErrorTrace
+*/
+
+/// A stack of code locations forming an error trace.
 #[derive(PartialEq, Eq, Default, Debug)]
-pub struct CodeLocationStack(pub Vec<CodeLocation>);
+pub struct ErrorTrace(pub Vec<CodeLocation>);
 
-impl Traced for CodeLocationStack {
+impl Traced for ErrorTrace {
     fn trace(&mut self, location: &'static panic::Location) {
         self.0.push(location.into());
     }
 }
 
-impl CodeLocationStack {
+impl ErrorTrace {
     /// Constructs a new code location stack with the caller at the top.
     #[inline]
     #[track_caller]
@@ -110,7 +112,7 @@ impl CodeLocationStack {
     }
 }
 
-impl fmt::Display for CodeLocationStack {
+impl fmt::Display for ErrorTrace {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (index, location) in self.0.iter().enumerate() {
             write!(f, "\n   {}: {}", index, location)?;

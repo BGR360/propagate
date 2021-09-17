@@ -1,6 +1,6 @@
 //! Defines a new result type.
 
-use crate::trace::{CodeLocationStack, Traced};
+use crate::trace::{ErrorTrace, Traced};
 
 use std::convert::Infallible;
 use std::fmt;
@@ -113,10 +113,10 @@ pub use self::Result::Ok;
 /// following ways:
 ///
 /// ```
-/// use propagate::{CodeLocationStack, Result};
+/// use propagate::{ErrorTrace, Result};
 ///
 /// // Directly, by manually constructing a new trace
-/// let result: Result<(), i32> = propagate::Err(42, CodeLocationStack::new());
+/// let result: Result<(), i32> = propagate::Err(42, ErrorTrace::new());
 ///
 /// // Using Result::new_err()
 /// let result: Result<(), i32> = Result::new_err(42);
@@ -192,7 +192,7 @@ pub use self::Result::Ok;
 /// [`propagate::Result`]: crate::Result
 #[must_use = "this `Result` may be an `Err` variant, which should be handled"]
 #[derive(PartialEq, Eq, Debug, Hash)]
-pub enum Result<T, E, S = CodeLocationStack> {
+pub enum Result<T, E, S = ErrorTrace> {
     /// Contains the success value.
     Ok(T),
     /// Contains the error value and associated error trace.

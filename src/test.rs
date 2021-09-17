@@ -1,6 +1,6 @@
 //! Helper class for testing.
 
-use crate::{CodeLocation, CodeLocationStack, Result};
+use crate::{CodeLocation, ErrorTrace, Result};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -36,9 +36,8 @@ impl Fixture {
         self.code_locations.get(tag).unwrap()
     }
 
-    pub fn assert_stack_matches_tags(&self, stack: &CodeLocationStack, tags: &[&'static str]) {
-        let tags_to_locations =
-            CodeLocationStack(tags.iter().map(|t| *self.get_location(t)).collect());
+    pub fn assert_stack_matches_tags(&self, stack: &ErrorTrace, tags: &[&'static str]) {
+        let tags_to_locations = ErrorTrace(tags.iter().map(|t| *self.get_location(t)).collect());
         assert_eq!(stack, &tags_to_locations);
     }
 

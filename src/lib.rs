@@ -105,7 +105,7 @@
 //! #         Self::Io(e)
 //! #     }
 //! # }
-//! use propagate::CodeLocationStack;
+//! use propagate::ErrorTrace;
 //! use std::fs::File;
 //!
 //! fn file_size(path: &str) -> propagate::Result<u64, MyError> {
@@ -127,8 +127,8 @@
 //!
 //!     if !lucky {
 //!         // Option 2: Directly construct a `propagate::Result`
-//!         // using `CodeLocationStack::new()`.
-//!         propagate::Err(MyError::Unlucky, CodeLocationStack::new())
+//!         // using `ErrorTrace::new()`.
+//!         propagate::Err(MyError::Unlucky, ErrorTrace::new())
 //!     } else {
 //!         // Must remember to surround with `Ok(..?)`.
 //!         propagate::Ok(file_size(path)?)
@@ -144,7 +144,7 @@
 
 // TODO:
 // * Add a feature flag to fall back to standard library results.
-// * Massage `CodeLocation` and `CodeLocationStack` a bit.
+// * Massage `CodeLocation` and `ErrorTrace` a bit.
 // * Improve crate-level docs a bit.
 
 pub mod result;
@@ -153,7 +153,7 @@ pub mod trace;
 #[doc(inline)]
 pub use self::{
     result::Result,
-    trace::{CodeLocation, CodeLocationStack, Traced},
+    trace::{CodeLocation, ErrorTrace, Traced},
 };
 
 pub use self::result::Result::{Err, Ok};
