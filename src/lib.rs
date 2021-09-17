@@ -77,13 +77,13 @@
 //! #     let result = maybe_file_size("foo.txt");
 //! #     match result {
 //! #         propagate::Ok(size) => println!("File size: {} KiB", size / 1024),
-//! #         propagate::Err(err) => {
-//! #             match err.error() {
+//! #         propagate::Err(err, trace) => {
+//! #             match err {
 //! #                 MyError::Unlucky => println!("Not this time!"),
 //! #                 MyError::Io(e) => println!("I/O error: {}", e),
 //! #                 MyError::TooSmall(size) => println!("File too small: {} bytes", size),
 //! #             }
-//! #             println!("Backtrace: {}", err.stack());
+//! #             println!("Stack trace: {}", trace);
 //! #         }
 //! #     }
 //! # }
@@ -105,6 +105,7 @@
 //! #         Self::Io(e)
 //! #     }
 //! # }
+//! use propagate::CodeLocationStack;
 //! use std::fs::File;
 //!
 //! fn file_size(path: &str) -> propagate::Result<u64, MyError> {
@@ -126,8 +127,8 @@
 //!
 //!     if !lucky {
 //!         // Option 2: Directly construct a `propagate::Result`
-//!         // using `Result::new_err()`.
-//!         propagate::Result::new_err(MyError::Unlucky)
+//!         // using `CodeLocationStack::new()`.
+//!         propagate::Err(MyError::Unlucky, CodeLocationStack::new())
 //!     } else {
 //!         // Must remember to surround with `Ok(..?)`.
 //!         propagate::Ok(file_size(path)?)
@@ -151,16 +152,11 @@ pub mod result;
 
 #[doc(inline)]
 pub use self::{
-    error::{CodeLocation, CodeLocationStack, TracedError},
+    error::{CodeLocation, CodeLocationStack},
     result::{Result, Traced},
 };
 
 pub use self::result::Result::{Err, Ok};
-
-pub mod prelude {
-    pub use crate::error::TracedError;
-    pub use crate::result::Result;
-}
 
 mod test;
 

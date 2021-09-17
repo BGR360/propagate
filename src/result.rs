@@ -1,12 +1,11 @@
 //! Defines a new result type.
 
-use crate::error::TracedError;
 use crate::CodeLocationStack;
 
 use std::convert::Infallible;
 use std::fmt;
 use std::ops::{ControlFlow, FromResidual, Try};
-use std::panic::Location;
+use std::panic;
 use std::process::Termination;
 
 pub use self::Result::Err;
@@ -14,7 +13,7 @@ pub use self::Result::Ok;
 
 /// A trait denoting "stack-like" types that can be used with [`Result<T, E, S>`].
 pub trait Traced {
-    fn trace(&mut self, location: &'static Location);
+    fn trace(&mut self, location: &'static panic::Location);
 }
 
 /*  ____                 _ _    _______   _______
@@ -81,25 +80,20 @@ pub trait Traced {
 ///
 /// ## Contained Value
 ///
-/// `propagate::Result` is defined as such;
+/// `propagate::Result` is defined as such:
 ///
 /// ```
-/// # use propagate::error::TracedError;
-/// enum Result<T, E> {
+/// enum Result<T, E, S> {
 ///     Ok(T),
-///     Err(TracedError<E>),
+///     Err(E, S),
 /// }
 /// ```
 ///
-/// [`TracedError`] is a wrapper around an arbitrary error value, and it stores
-/// a stack trace alongside the wrapped error value.
+/// Thus, when a `propagate::Result` is equal to `Err`, the enum contains not
+/// only the error value of type `E`, but also the error trace of type `S`.
 ///
-/// Thus, when a `propagate::Result` is equal to `Err(e)`, the value `e` is not
-/// of type `E`, but rather it is of type `TracedError<E>`.
-///
-/// Because of this, if you want to pattern match a `Result<T, E>` and get a
-/// value of `E`, you must call [`error()`][crate::TracedError::error()] on the
-/// the `Err(e)` value first:
+/// Because of this, if you want to pattern match a `Result<T, E, S>` and get a
+/// value of `E`, you must ignore the trace value:
 ///
 /// ```
 /// # fn function_that_returns_result() -> propagate::Result<(), String> {
@@ -108,10 +102,9 @@ pub trait Traced {
 /// let result: propagate::Result<(), String> = function_that_returns_result();
 /// match result {
 ///     propagate::Ok(_) => {}
-///     propagate::Err(e) => {
-///         println!("stack: {}", e.stack());
-///         let inner: &String = e.error();
-///         println!("inner: {}", inner);
+///     propagate::Err(err, trace) => {
+///         println!("error: {}", err);
+///         println!("trace: {}", trace);
 ///     }
 /// }
 /// ```
@@ -125,10 +118,10 @@ pub trait Traced {
 /// following ways:
 ///
 /// ```
-/// use propagate::{Result, TracedError};
+/// use propagate::{CodeLocationStack, Result};
 ///
-/// // Directly
-/// let result: Result<(), i32> = propagate::Err(TracedError::new(42));
+/// // Directly, by manually constructing a new trace
+/// let result: Result<(), i32> = propagate::Err(42, CodeLocationStack::new());
 ///
 /// // Using Result::new_err()
 /// let result: Result<(), i32> = Result::new_err(42);
@@ -207,8 +200,8 @@ pub trait Traced {
 pub enum Result<T, E, S = CodeLocationStack> {
     /// Contains the success value.
     Ok(T),
-    /// Contains the error value wrapped in a [`TracedError`].
-    Err(TracedError<E, S>),
+    /// Contains the error value and associated error trace.
+    Err(E, S),
 }
 
 /*  _                 _   _____
@@ -245,7 +238,7 @@ impl<T, E, S: Traced> Try for Result<T, E, S> {
     fn branch(self) -> ControlFlow<Self::Residual, Self::Output> {
         match self {
             Ok(ok) => ControlFlow::Continue(ok),
-            Err(err) => ControlFlow::Break(Err(err)),
+            Err(err, trace) => ControlFlow::Break(Err(err, trace)),
         }
     }
 }
@@ -261,9 +254,9 @@ where
     fn from_residual(residual: Result<Infallible, E, S>) -> Self {
         match residual {
             Ok(_) => unreachable!(),
-            Err(mut e) => {
-                e.push_caller();
-                Err(e.convert_inner())
+            Err(err, mut trace) => {
+                trace.trace(panic::Location::caller());
+                Err(From::from(err), trace)
             }
         }
     }
@@ -280,7 +273,11 @@ where
     fn from_residual(residual: std::result::Result<Infallible, E>) -> Self {
         match residual {
             std::result::Result::Ok(_) => unreachable!(),
-            std::result::Result::Err(e) => Err(TracedError::new(From::from(e))),
+            std::result::Result::Err(err) => {
+                let mut trace = S::default();
+                trace.trace(panic::Location::caller());
+                Err(From::from(err), trace)
+            }
         }
     }
 }
@@ -299,13 +296,10 @@ impl<T, E: std::error::Error, S: fmt::Display> Termination for Result<T, E, S> {
     fn report(self) -> i32 {
         match self {
             Ok(_) => 0,
-            Err(err) => {
-                println!(
-                    "Error: {}",
-                    trial_and_error::Report::new(err.error()).pretty(true)
-                );
+            Err(err, trace) => {
+                println!("Error: {}", trial_and_error::Report::new(err).pretty(true));
 
-                println!("\nReturn Trace: {}", err.stack());
+                println!("\nReturn Trace: {}", trace);
 
                 1
             }
@@ -340,14 +334,17 @@ impl<T, E, S: Traced + Default> Result<T, E, S> {
     where
         E: From<D>,
     {
-        Err(TracedError::new(E::from(error_value)))
+        let mut trace = S::default();
+        trace.trace(panic::Location::caller());
+        Err(E::from(error_value), trace)
     }
 }
 
 impl<T, E, S: Traced> Result<T, E, S> {
-    /// Converts from `Result<T, E>` to [`std::result::Result<T, E>`].
+    /// Converts from `Result<T, E, S>` to [`std::result::Result<T, E>`].
     ///
-    /// Converts `self` into a [`std::result::Result<T, E>`], consuming `self`.
+    /// Converts `self` into a [`std::result::Result<T, E>`], consuming `self`,
+    /// and discarding the error trace, if any.
     ///
     /// # Examples
     ///
@@ -365,7 +362,7 @@ impl<T, E, S: Traced> Result<T, E, S> {
     pub fn to_std(self) -> std::result::Result<T, E> {
         match self {
             Ok(t) => std::result::Result::Ok(t),
-            Err(e) => std::result::Result::Err(e.error),
+            Err(err, _) => std::result::Result::Err(err),
         }
     }
 
@@ -373,13 +370,13 @@ impl<T, E, S: Traced> Result<T, E, S> {
     pub fn as_std_ref(&self) -> std::result::Result<&T, &E> {
         match self {
             Ok(ref t) => std::result::Result::Ok(t),
-            Err(ref e) => std::result::Result::Err(&e.error),
+            Err(ref err, _) => std::result::Result::Err(err),
         }
     }
 
-    /// Converts from `Result<T, E>` to [`Option<TracedError<E>>`].
+    /// Converts from `Result<T, E, S>` to [`Option<(E, S)>`].
     ///
-    /// Converts `self` into an [`Option<TracedError<E>>`], consuming `self`,
+    /// Converts `self` into an [`Option<(E, S)>`], consuming `self`,
     /// and discarding the success value, if any.
     ///
     /// # Examples
@@ -389,29 +386,32 @@ impl<T, E, S: Traced> Result<T, E, S> {
     /// ```
     /// # use propagate::result::Result;
     /// let x: Result<u32, &str> = propagate::Ok(2);
-    /// assert!(matches!(x.err_stack(), None));
+    /// assert!(matches!(x.err_trace(), None));
     ///
     /// let x: Result<u32, &str> = Result::new_err("Nothing here");
-    /// match x.err_stack() {
-    ///     Some(e) => assert_eq!(*e.error(), "Nothing here"),
+    /// match x.err_trace() {
+    ///     Some((err, trace)) => {
+    ///         assert_eq!(err, "Nothing here");
+    ///         assert_eq!(trace.0.len(), 1);
+    ///     }
     ///     None => unreachable!(),
     /// }
     /// ```
     #[inline]
-    pub fn err_stack(self) -> Option<TracedError<E, S>> {
+    pub fn err_trace(self) -> Option<(E, S)> {
         match self {
             Ok(_) => None,
-            Err(x) => Some(x),
+            Err(err, trace) => Some((err, trace)),
         }
     }
 }
 
-impl<T, E> Result<T, E> {
+impl<T, E, S> Result<T, E, S> {
     /////////////////////////////////////////////////////////////////////////
     // Querying the contained values
     /////////////////////////////////////////////////////////////////////////
 
-    /// Returns `true` if the result is [`Ok`].
+    /// Returns `true` if the result is `Ok`.
     ///
     /// # Examples
     ///
@@ -431,7 +431,7 @@ impl<T, E> Result<T, E> {
         matches!(*self, Ok(_))
     }
 
-    /// Returns `true` if the result is [`Err`].
+    /// Returns `true` if the result is `Err`.
     ///
     /// # Examples
     ///
@@ -455,7 +455,7 @@ impl<T, E> Result<T, E> {
     // Adapter for each variant
     /////////////////////////////////////////////////////////////////////////
 
-    /// Converts from `Result<T, E>` to [`Option<T>`].
+    /// Converts from `Result<T, E, S>` to [`Option<T>`].
     ///
     /// Converts `self` into an [`Option<T>`], consuming `self`,
     /// and discarding the error, if any.
@@ -476,14 +476,14 @@ impl<T, E> Result<T, E> {
     pub fn ok(self) -> Option<T> {
         match self {
             Ok(x) => Some(x),
-            Err(_) => None,
+            Err(_, _) => None,
         }
     }
 
-    /// Converts from `Result<T, E>` to [`Option<E>`].
+    /// Converts from `Result<T, E, S>` to [`Option<E>`].
     ///
     /// Converts `self` into an [`Option<E>`], consuming `self`,
-    /// and discarding the success value, if any.
+    /// and discarding the success value and error trace, if any.
     ///
     /// # Examples
     ///
@@ -501,7 +501,7 @@ impl<T, E> Result<T, E> {
     pub fn err(self) -> Option<E> {
         match self {
             Ok(_) => None,
-            Err(x) => Some(x.error),
+            Err(err, _) => Some(err),
         }
     }
 
@@ -509,10 +509,7 @@ impl<T, E> Result<T, E> {
     // Adapter for working with references
     /////////////////////////////////////////////////////////////////////////
 
-    // TODO: how to do this? I think the returned result should have a `&T` or a `&TracedError<E>`,
-    // but idk how to make that happen.
-    /*
-    /// Converts from `&Result<T, E>` to `Result<&T, &E>`.
+    /// Converts from `&Result<T, E, S>` to `Result<&T, &E, &S>`.
     ///
     /// Produces a new `Result`, containing a reference
     /// into the original, leaving the original in place.
@@ -522,39 +519,37 @@ impl<T, E> Result<T, E> {
     /// Basic usage:
     ///
     /// ```
-    /// let x: Result<u32, &str> = Ok(2);
-    /// assert_eq!(x.as_ref(), Ok(&2));
+    /// # use propagate::result::Result;
+    /// let x: Result<u32, &str> = propagate::Ok(2);
+    /// assert_eq!(x.as_ref(), propagate::Ok(&2));
     ///
     /// let x: Result<u32, &str> = Result::new_err("Error");
-    /// assert_eq!(x.as_ref(), Err(&"Error"));
+    /// assert!(matches!(x.as_ref(), propagate::Err(&"Error", _)));
     /// ```
     #[inline]
-    pub const fn as_ref(&self) -> Result<&T, &E> {
+    pub const fn as_ref(&self) -> Result<&T, &E, &S> {
         match *self {
-            Ok(ref x) => Ok(x),
-            Err(ref x) => Err(x),
+            Ok(ref t) => Ok(t),
+            Err(ref err, ref trace) => Err(err, trace),
         }
     }
-    */
 
-    // TODO: how to do this? I think the returned result should have a `&mut T` or a
-    // `&mut TracedError<E>`, but idk how to make that happen.
-    /*
-    /// Converts from `&mut Result<T, E>` to `Result<&mut T, &mut E>`.
+    /// Converts from `&mut Result<T, E, S>` to `Result<&mut T, &mut E, &mut S>`.
     ///
     /// # Examples
     ///
     /// Basic usage:
     ///
     /// ```
+    /// # use propagate::result::Result;
     /// fn mutate(r: &mut Result<i32, i32>) {
     ///     match r.as_mut() {
-    ///         Ok(v) => *v = 42,
-    ///         Err(e) => *e = 0,
+    ///         propagate::Ok(v) => *v = 42,
+    ///         propagate::Err(e, _) => *e = 0,
     ///     }
     /// }
     ///
-    /// let mut x: Result<i32, i32> = Ok(2);
+    /// let mut x: Result<i32, i32> = propagate::Ok(2);
     /// mutate(&mut x);
     /// assert_eq!(x.unwrap(), 42);
     ///
@@ -563,13 +558,12 @@ impl<T, E> Result<T, E> {
     /// assert_eq!(x.unwrap_err(), 0);
     /// ```
     #[inline]
-    pub fn as_mut(&mut self) -> Result<&mut T, &mut E> {
+    pub fn as_mut(&mut self) -> Result<&mut T, &mut E, &mut S> {
         match *self {
-            Ok(ref mut x) => Ok(x),
-            Err(ref mut x) => Err(x),
+            Ok(ref mut t) => Ok(t),
+            Err(ref mut err, ref mut trace) => Err(err, trace),
         }
     }
-    */
 
     /////////////////////////////////////////////////////////////////////////
     // Transforming contained values
@@ -602,15 +596,12 @@ impl<T, E> Result<T, E> {
     /// assert_eq!(y.err().unwrap(), "error code: 13".to_string());
     /// ```
     #[inline]
-    pub fn map_err<F, O: FnOnce(E) -> F>(self, op: O) -> Result<T, F> {
+    pub fn map_err<F, O: FnOnce(E) -> F>(self, op: O) -> Result<T, F, S> {
         // XXX: should this push_caller? I think probably not, as users will just use
         // `?` with whatever comes out of this.
         match self {
             Ok(t) => Ok(t),
-            Err(e) => Err(TracedError {
-                error: op(e.error),
-                stack: e.stack,
-            }),
+            Err(err, trace) => Err(op(err), trace),
         }
     }
 
@@ -643,7 +634,7 @@ impl<T, E> Result<T, E> {
     pub fn unwrap_or(self, default: T) -> T {
         match self {
             Ok(t) => t,
-            Err(_) => default,
+            Err(_, _) => default,
         }
     }
 
@@ -663,7 +654,7 @@ impl<T, E> Result<T, E> {
     pub fn unwrap_or_else<F: FnOnce(E) -> T>(self, op: F) -> T {
         match self {
             Ok(t) => t,
-            Err(e) => op(e.error),
+            Err(err, _) => op(err),
         }
     }
 }
@@ -691,7 +682,7 @@ impl<T, E: fmt::Debug> Result<T, E> {
     pub fn expect(self, msg: &str) -> T {
         match self {
             Ok(t) => t,
-            Err(e) => unwrap_failed(msg, &e),
+            Err(err, _) => unwrap_failed(msg, &err),
         }
     }
 
@@ -732,7 +723,7 @@ impl<T, E: fmt::Debug> Result<T, E> {
     pub fn unwrap(self) -> T {
         match self {
             Ok(t) => t,
-            Err(e) => unwrap_failed("called `Result::unwrap()` on an `Err` value", &e),
+            Err(err, _) => unwrap_failed("called `Result::unwrap()` on an `Err` value", &err),
         }
     }
 }
@@ -759,7 +750,7 @@ impl<T: fmt::Debug, E> Result<T, E> {
     pub fn expect_err(self, msg: &str) -> E {
         match self {
             Ok(t) => unwrap_failed(msg, &t),
-            Err(e) => e.error,
+            Err(err, _) => err,
         }
     }
 
@@ -788,7 +779,7 @@ impl<T: fmt::Debug, E> Result<T, E> {
     pub fn unwrap_err(self) -> E {
         match self {
             Ok(t) => unwrap_failed("called `Result::unwrap_err()` on an `Ok` value", &t),
-            Err(e) => e.error,
+            Err(err, _) => err,
         }
     }
 }
@@ -824,12 +815,12 @@ impl<T: Default, E> Result<T, E> {
     pub fn unwrap_or_default(self) -> T {
         match self {
             Ok(x) => x,
-            Err(_) => Default::default(),
+            Err(_, _) => Default::default(),
         }
     }
 }
 
-impl<T, E> Result<Option<T>, E> {
+impl<T, E, S> Result<Option<T>, E, S> {
     /// Transposes a `Result` of an `Option` into an `Option` of a `Result`.
     ///
     /// `Ok(None)` will be mapped to `None`.
@@ -847,11 +838,11 @@ impl<T, E> Result<Option<T>, E> {
     /// assert_eq!(x.transpose(), y);
     /// ```
     #[inline]
-    pub fn transpose(self) -> Option<Result<T, E>> {
+    pub fn transpose(self) -> Option<Result<T, E, S>> {
         match self {
             Ok(Some(x)) => Some(Ok(x)),
             Ok(None) => None,
-            Err(e) => Some(Err(e)),
+            Err(err, trace) => Some(Err(err, trace)),
         }
     }
 }
@@ -874,9 +865,9 @@ fn unwrap_failed(msg: &str, error: &dyn fmt::Debug) -> ! {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::test::Fixture;
     use crate::CodeLocation;
+    use crate::{Ok, Result};
     use std::fs;
     use std::io;
 

@@ -1,7 +1,6 @@
 //! Helper class for testing.
 
-use crate::prelude::*;
-use crate::{CodeLocation, CodeLocationStack, TracedError};
+use crate::{CodeLocation, CodeLocationStack, Result};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -16,7 +15,7 @@ mod tests {
         fix.tag_location("tag", CodeLocation::here());
         assert_eq!(
             *fix.get_location("tag"),
-            CodeLocation::new("src/test.rs", 16)
+            CodeLocation::new("src/test.rs", 15)
         );
     }
 }
@@ -43,17 +42,12 @@ impl Fixture {
         assert_eq!(stack, &tags_to_locations);
     }
 
-    pub fn assert_error_has_stack<E>(&self, error: &TracedError<E>, tags: &[&'static str]) {
-        let stack = error.stack();
-        self.assert_stack_matches_tags(stack, tags);
-    }
-
     pub fn assert_result_has_stack<T: fmt::Debug, E: fmt::Debug>(
         &self,
         result: Result<T, E>,
         tags: &[&'static str],
     ) {
-        let err_stack = result.err_stack().unwrap();
-        self.assert_error_has_stack(&err_stack, tags);
+        let (_err, stack) = result.err_trace().unwrap();
+        self.assert_stack_matches_tags(&stack, tags);
     }
 }

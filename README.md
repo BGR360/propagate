@@ -26,9 +26,9 @@ fn main() {
         propagate::Ok(size) => {
             println!("Ok: {}", size);
         }
-        propagate::Err(traced_err) => {
-            println!("Err: {:?}", traced_err.error());
-            println!("Stack trace: {}", traced_err.stack());
+        propagate::Err(err, trace) => {
+            println!("Err: {:?}", err);
+            println!("Stack trace: {}", trace);
         }
     }
 }
