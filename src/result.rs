@@ -805,7 +805,7 @@ impl<T: Default, E> Result<T, E> {
     /// ```
     ///
     /// [`parse`]: str::parse
-    /// [`FromStr`]: crate::str::FromStr
+    /// [`FromStr`]: std::str::FromStr
     #[inline]
     pub fn unwrap_or_default(self) -> T {
         match self {
