@@ -140,6 +140,8 @@
 //! }
 //! ```
 //!
+//! See [`propagate::Result`] for more information.
+//!
 //! [`propagate::Result`]: crate::Result
 //! [`try` blocks]: https://doc.rust-lang.org/beta/unstable-book/language-features/try-blocks.html
 

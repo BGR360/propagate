@@ -20,7 +20,7 @@ pub use self::Result::Ok;
  *  FIGLET: Result<T, E>
  */
 
-/// A replacement for [`std::result::Result`] that supports chaining via the `?`
+/// A replacement for [`std::result::Result`] that supports tracing via the `?`
 /// operator.
 ///
 /// After a [`propagate::Result`] has been constructed, it will keep a running
