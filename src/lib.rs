@@ -25,9 +25,13 @@
 //! }
 //! ```
 //!
-//! ## Try blocks
+//! The following two examples show how [`propagate::Result`] might be used for
+//! error handling.
 //!
-//! Here is an example of using Propagate with [`try` blocks]:
+//! ## With try blocks
+//!
+//! This example makes use of [`try` blocks]. This makes the resulting code
+//! cleaner compared to not using `try` blocks.
 //!
 //! [`try` blocks]:
 //! https://doc.rust-lang.org/beta/unstable-book/language-features/try-blocks.html
@@ -89,9 +93,12 @@
 //! # }
 //! ```
 //!
-//! ## No try blocks
+//! ## Without try blocks
 //!
-//! And here is what it would look like without `try` blocks:
+//! This example is the same as the one above, except it does not make use of
+//! `try` blocks. This requires a bit more boilerplate, and also requires the
+//! user to remember to properly forward results (see [`propagate::Result`] for
+//! more information).
 //!
 //! ```
 //! # use std::io;
@@ -114,7 +121,7 @@
 //!     let size = File::open(path)?.metadata()?.len();
 //!
 //!     if size < 1024 {
-//!         // Option 1: Coerce a `std::result::Result` to a`propagate::Result`
+//!         // Option 1: Coerce a `std::result::Result` to a `propagate::Result`
 //!         // using `?`.
 //!         Err(MyError::TooSmall(size))?
 //!     } else {

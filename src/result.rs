@@ -20,7 +20,8 @@ pub use self::Result::Ok;
  *  FIGLET: Result<T, E>
  */
 
-/// A replacement for [`std::result::Result<T, E>`] that supports chaining via the `?` operator.
+/// A replacement for [`std::result::Result`] that supports chaining via the `?`
+/// operator.
 ///
 /// # Propagation Using `?`
 ///
@@ -33,9 +34,13 @@ pub use self::Result::Ok;
 /// using the `?` operator if there is a [`From<E>`] defined for type `F`:
 ///
 /// ```
-/// use propagate::Result;
-/// fn f() -> Result<(), String> {
-///     let result: Result<(), &str> = Result::new_err("str slice");
+/// use propagate::ErrorTrace;
+///
+/// fn f() -> propagate::Result<(), String> {
+///     let result: propagate::Result<(), &str> =
+///         propagate::Err("str slice", ErrorTrace::new());
+///
+///     // Coerces string slice to String object
 ///     propagate::Ok(result?)
 /// }
 /// ```
@@ -47,11 +52,13 @@ pub use self::Result::Ok;
 /// `propagate::Result` using the `?` operator:
 ///
 /// ```
-/// use propagate::Result;
 /// use std::fs::File;
-/// fn f() -> Result<File, std::io::Error> {
-///     let result: std::result::Result<File, std::io::Error> =
+///
+/// fn f() -> propagate::Result<File, std::io::Error> {
+///     let result: Result<File, std::io::Error> =
 ///         File::open("foo.txt");
+///
+///     // Coerces std::result::Result to propagate::Result
 ///     propagate::Ok(result?)
 /// }
 /// ```
@@ -60,9 +67,12 @@ pub use self::Result::Ok;
 /// if there is a [`From<E>`] defined for type `F`.
 ///
 /// ```
-/// use propagate::Result;
-/// fn f() -> Result<(), String> {
-///     let result: std::result::Result<(), &str> = Err("string slice");
+/// fn f() -> propagate::Result<(), String> {
+///     let result: Result<(), &str> = Err("string slice");
+///
+///     // Coerces std::result::Result to propagate::Result
+///     // AND
+///     // Coerces string slice to String object
 ///     propagate::Ok(result?)
 /// }
 /// ```
@@ -70,31 +80,33 @@ pub use self::Result::Ok;
 ///
 /// # Working with `propagate::Result`
 ///
-/// There are a few caveats when using [`propagate::Result`] as a replacement
-/// for the std library result.
+/// There are a few things to remember when using [`propagate::Result`] as a
+/// replacement for the std library result.
 ///
-/// ## Contained Value
+/// ## Creating Errors
 ///
-/// `propagate::Result` is defined as such:
+/// Construct an [`Err`] variant by providing an error value and a new trace
+/// (e.g., using [`ErrorTrace::new()`]):
 ///
 /// ```
-/// enum Result<T, E, S> {
-///     Ok(T),
-///     Err(E, S),
+/// use propagate::ErrorTrace;
+///
+/// fn gives_error() -> propagate::Result<(), &'static str> {
+///     propagate::Err("Nothing here", ErrorTrace::new())
 /// }
 /// ```
 ///
-/// Thus, when a `propagate::Result` is equal to `Err`, the enum contains not
-/// only the error value of type `E`, but also the error trace of type `S`.
+/// ## Pattern Matching
 ///
-/// Because of this, if you want to pattern match a `Result<T, E, S>` and get a
-/// value of `E`, you must ignore the trace value:
+/// The [`Err`] variant contains two values: the error and its associated trace.
+/// Pattern matching should look like this:
 ///
 /// ```
-/// # fn function_that_returns_result() -> propagate::Result<(), String> {
-/// #     propagate::Result::new_err("a")
+/// # use propagate::ErrorTrace;
+/// # fn gives_error() -> propagate::Result<(), &'static str> {
+/// #     propagate::Err("Nothing here", ErrorTrace::new())
 /// # }
-/// let result: propagate::Result<(), String> = function_that_returns_result();
+/// let result: propagate::Result<_, _> = gives_error();
 /// match result {
 ///     propagate::Ok(_) => {}
 ///     propagate::Err(err, trace) => {
@@ -102,24 +114,6 @@ pub use self::Result::Ok;
 ///         println!("trace: {}", trace);
 ///     }
 /// }
-/// ```
-///
-/// ## Creating Errors
-///
-/// Because `Result<T, E>` is technically a `Result<T, TracedError<E>>`, you
-/// cannot construct a new error result by simply doing `Err(error_value)`.
-///
-/// You can turn your error value into a `TracedError` in one of the
-/// following ways:
-///
-/// ```
-/// use propagate::{ErrorTrace, Result};
-///
-/// // Directly, by manually constructing a new trace
-/// let result: Result<(), i32> = propagate::Err(42, ErrorTrace::new());
-///
-/// // Using Result::new_err()
-/// let result: Result<(), i32> = Result::new_err(42);
 /// ```
 ///
 /// ## **IMPORTANT**: Forwarding Errors
@@ -130,36 +124,32 @@ pub use self::Result::Ok;
 /// function's return type.
 ///
 /// ```
-/// use propagate::Result;
-///
-/// fn gives_error() -> Result<(), &'static str> {
-///     Result::new_err("Nothing here")
-/// }
-///
-/// // YES: Result surrounded by Ok(..?), so the stack trace will include foo()
-/// fn foo() -> Result<(), &'static str> {
+/// # use propagate::ErrorTrace;
+/// # fn gives_error() -> propagate::Result<(), &'static str> {
+/// #     propagate::Err("Nothing here", ErrorTrace::new())
+/// # }
+/// // YES: Result surrounded by Ok(..?), so the error trace will include foo()
+/// fn foo() -> propagate::Result<(), &'static str> {
 ///     let result = gives_error();
 ///     propagate::Ok(result?)
 /// }
 ///
-/// // NO: Result returned directly, so the stack trace will not include bar()
-/// fn bar() -> Result<(), &'static str> {
+/// // NO: Result returned directly, so the error trace will not include bar()
+/// fn bar() -> propagate::Result<(), &'static str> {
 ///     let result = gives_error();
 ///     result
 /// }
 /// ```
 ///
-/// When you do use `try` blocks, you do not need the `Ok`, and the compiler
-/// will force you to use `?`:
+/// When you use `try` blocks, you do not need the `Ok`:
 ///
 /// ```
 /// #![feature(try_blocks)]
-/// # use propagate::Result;
-/// # fn gives_error() -> Result<(), &'static str> {
-/// #     Result::new_err("Nothing here")
+/// # use propagate::ErrorTrace;
+/// # fn gives_error() -> propagate::Result<(), &'static str> {
+/// #     propagate::Err("Nothing here", ErrorTrace::new())
 /// # }
-/// // YES
-/// fn foo() -> Result<(), &'static str> {
+/// fn foo() -> propagate::Result<(), &'static str> {
 ///     try {
 ///         let result = gives_error();
 ///         result?
@@ -167,24 +157,18 @@ pub use self::Result::Ok;
 /// }
 /// ```
 ///
+/// And the compiler will force you to use `?`:
+///
 /// ```compile_fail
 /// #![feature(try_blocks)]
-/// # use propagate::Result;
-/// # fn gives_error() -> Result<(), &'static str> {
-/// #     Result::new_err("Nothing here")
+/// # use propagate::ErrorTrace;
+/// # fn gives_error() -> propagate::Result<(), &'static str> {
+/// #     propagate::Err("Nothing here", ErrorTrace::new())
 /// # }
-/// // NO: will not compile
-/// fn bar() -> Result<(), &'static str> {
+/// fn bar() -> propagate::Result<(), &'static str> {
 ///     try {
 ///         let result = gives_error();
 ///         result
-///     }
-/// }
-/// // NO: will not compile
-/// fn baz() -> Result<(), &'static str> {
-///     try {
-///         let result = gives_error();
-///         propagate::Ok(result?)
 ///     }
 /// }
 /// ```
@@ -238,7 +222,7 @@ impl<T, E, S: Traced> Try for Result<T, E, S> {
     }
 }
 
-/// Pushes an entry to the stack when one [`Result`] is coerced to another using the `?` operator.
+/// Pushes an entry to the trace when one [`Result`] is coerced to another using the `?` operator.
 impl<T, E, S, F> FromResidual<Result<Infallible, E, S>> for Result<T, F, S>
 where
     S: Traced,
@@ -257,7 +241,7 @@ where
     }
 }
 
-/// Starts a new stack when a [`std::result::Result`] is coerced to a [`Result`] using `?`.
+/// Starts a new trace when a [`std::result::Result`] is coerced to a [`Result`] using `?`.
 impl<T, E, S, F> FromResidual<std::result::Result<Infallible, E>> for Result<T, F, S>
 where
     S: Traced + Default,
@@ -369,9 +353,9 @@ impl<T, E, S: Traced> Result<T, E, S> {
         }
     }
 
-    /// Converts from `Result<T, E, S>` to [`Option<(E, S)>`].
+    /// Converts from `Result<T, E, S>` to [`Option<(E, S)>`][Option].
     ///
-    /// Converts `self` into an [`Option<(E, S)>`], consuming `self`,
+    /// Converts `self` into an [`Option<(E, S)>`][Option], consuming `self`,
     /// and discarding the success value, if any.
     ///
     /// # Examples
@@ -381,7 +365,7 @@ impl<T, E, S: Traced> Result<T, E, S> {
     /// ```
     /// # use propagate::result::Result;
     /// let x: Result<u32, &str> = propagate::Ok(2);
-    /// assert!(matches!(x.err_trace(), None));
+    /// assert!(x.err_trace().is_none());
     ///
     /// let x: Result<u32, &str> = Result::new_err("Nothing here");
     /// match x.err_trace() {
@@ -640,10 +624,14 @@ impl<T, E, S> Result<T, E, S> {
     /// Basic usage:
     ///
     /// ```
+    /// # use propagate::{ErrorTrace, Result};
     /// fn count(x: &str) -> usize { x.len() }
     ///
-    /// assert_eq!(Ok(2).unwrap_or_else(count), 2);
-    /// assert_eq!(Err("foo").unwrap_or_else(count), 3);
+    /// let x: Result<usize, &str> = propagate::Ok(2);
+    /// assert_eq!(x.unwrap_or_else(count), 2);
+    ///
+    /// let x: Result<usize, &str> = propagate::Err("foo", ErrorTrace::new());
+    /// assert_eq!(x.unwrap_or_else(count), 3);
     /// ```
     #[inline]
     pub fn unwrap_or_else<F: FnOnce(E) -> T>(self, op: F) -> T {
@@ -819,7 +807,8 @@ impl<T, E, S> Result<Option<T>, E, S> {
     /// Transposes a `Result` of an `Option` into an `Option` of a `Result`.
     ///
     /// `Ok(None)` will be mapped to `None`.
-    /// `Ok(Some(_))` and `Err(_)` will be mapped to `Some(Ok(_))` and `Some(Err(_))`.
+    /// `Ok(Some(_))` and `Err(_, _)` will be mapped to `Some(Ok(_))` and
+    /// `Some(Err(_, _))`.
     ///
     /// # Examples
     ///
@@ -843,6 +832,7 @@ impl<T, E, S> Result<Option<T>, E, S> {
 }
 
 // This is a separate function to reduce the code size of the methods
+// TODO: Include the error trace in the panic message.
 #[inline(never)]
 #[cold]
 #[track_caller]
