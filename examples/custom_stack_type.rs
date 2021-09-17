@@ -10,14 +10,9 @@ mod custom {
 
     pub type Result<T, E> = propagate::Result<T, E, CustomStack>;
 
+    // Default required in order to construct new errors.
+    #[derive(Default)]
     pub struct CustomStack(Vec<String>);
-
-    // Required in order to construct new errors.
-    impl Default for CustomStack {
-        fn default() -> Self {
-            Self(Vec::default())
-        }
-    }
 
     // Required for propagation tracing.
     impl propagate::Traced for CustomStack {
