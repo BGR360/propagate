@@ -318,7 +318,7 @@ impl<T, E, S: Traced + Default> Result<T, E, S> {
     }
 }
 
-impl<T, E, S: Traced> Result<T, E, S> {
+impl<T, E, S> Result<T, E, S> {
     /// Converts from `Result<T, E, S>` to [`std::result::Result<T, E>`].
     ///
     /// Converts `self` into a [`std::result::Result<T, E>`], consuming `self`,
@@ -374,9 +374,7 @@ impl<T, E, S: Traced> Result<T, E, S> {
             Err(err, trace) => Some((err, trace)),
         }
     }
-}
 
-impl<T, E, S> Result<T, E, S> {
     /////////////////////////////////////////////////////////////////////////
     // Querying the contained values
     /////////////////////////////////////////////////////////////////////////
