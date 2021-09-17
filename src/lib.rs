@@ -33,9 +33,6 @@
 //! This example makes use of [`try` blocks]. This makes the resulting code
 //! cleaner compared to not using `try` blocks.
 //!
-//! [`try` blocks]:
-//! https://doc.rust-lang.org/beta/unstable-book/language-features/try-blocks.html
-//!
 //! ```
 //! #![feature(try_blocks)]
 //! # use std::io;
@@ -96,7 +93,7 @@
 //! ## Without try blocks
 //!
 //! This example is the same as the one above, except it does not make use of
-//! `try` blocks. This requires a bit more boilerplate, and also requires the
+//! [`try` blocks]. This requires a bit more boilerplate, and also requires the
 //! user to remember to properly forward results (see [`propagate::Result`] for
 //! more information).
 //!
@@ -144,6 +141,7 @@
 //! ```
 //!
 //! [`propagate::Result`]: crate::Result
+//! [`try` blocks]: https://doc.rust-lang.org/beta/unstable-book/language-features/try-blocks.html
 
 #![feature(try_trait_v2)]
 #![feature(control_flow_enum)]

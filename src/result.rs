@@ -26,6 +26,102 @@ pub use self::Result::Ok;
 /// After a [`propagate::Result`] has been constructed, it will keep a running
 /// "stack trace" of the code locations where the `?` operator is invoked on it.
 ///
+/// # Working with `propagate::Result`
+///
+/// There are a few things to remember when using [`propagate::Result`] as a
+/// replacement for the std library result.
+///
+/// ## Creating Errors
+///
+/// Construct an [`Err`] variant by providing an error value and a new trace
+/// (e.g., using [`ErrorTrace::new()`]):
+///
+/// ```
+/// use propagate::ErrorTrace;
+///
+/// fn gives_error() -> propagate::Result<(), &'static str> {
+///     propagate::Err("Nothing here", ErrorTrace::new())
+/// }
+/// ```
+///
+/// ## Pattern Matching
+///
+/// The [`Err`] variant contains two values: the error and its associated trace.
+/// Pattern matching should look like this:
+///
+/// ```
+/// # use propagate::ErrorTrace;
+/// # fn gives_error() -> propagate::Result<(), &'static str> {
+/// #     propagate::Err("Nothing here", ErrorTrace::new())
+/// # }
+/// let result: propagate::Result<_, _> = gives_error();
+/// match result {
+///     propagate::Ok(_) => {}
+///     propagate::Err(err, trace) => {
+///         println!("error: {}", err);
+///         println!("trace: {}", trace);
+///     }
+/// }
+/// ```
+///
+/// ## **IMPORTANT**: Forwarding Errors
+///
+/// When not using [`try` blocks], you must remember to surround result values
+/// with `Ok(..?)` when returning them in a function. The compiler will not
+/// force you to do this if the result value's type is identical to the
+/// function's return type.
+///
+/// ```
+/// # use propagate::ErrorTrace;
+/// # fn gives_error() -> propagate::Result<(), &'static str> {
+/// #     propagate::Err("Nothing here", ErrorTrace::new())
+/// # }
+/// // YES: Result surrounded by Ok(..?), so the error trace will include foo()
+/// fn foo() -> propagate::Result<(), &'static str> {
+///     let result = gives_error();
+///     propagate::Ok(result?)
+/// }
+///
+/// // NO: Result returned directly, so the error trace will not include bar()
+/// fn bar() -> propagate::Result<(), &'static str> {
+///     let result = gives_error();
+///     result
+/// }
+/// ```
+///
+/// When you use [`try` blocks], you do not need the `Ok`:
+///
+/// ```
+/// #![feature(try_blocks)]
+/// # use propagate::ErrorTrace;
+/// # fn gives_error() -> propagate::Result<(), &'static str> {
+/// #     propagate::Err("Nothing here", ErrorTrace::new())
+/// # }
+/// fn foo() -> propagate::Result<(), &'static str> {
+///     try {
+///         let result = gives_error();
+///         result?
+///     }
+/// }
+/// ```
+///
+/// And the compiler will force you to use `?`:
+///
+/// ```compile_fail
+/// #![feature(try_blocks)]
+/// # use propagate::ErrorTrace;
+/// # fn gives_error() -> propagate::Result<(), &'static str> {
+/// #     propagate::Err("Nothing here", ErrorTrace::new())
+/// # }
+/// fn bar() -> propagate::Result<(), &'static str> {
+///     try {
+///         let result = gives_error();
+///         result
+///     }
+/// }
+/// ```
+///
+///
 /// # Coercion Using `?`
 ///
 /// The `?` operator can be used to coerce between result types.
@@ -75,103 +171,8 @@ pub use self::Result::Ok;
 /// let result: propagate::Result<(), String> = try { result? };
 /// ```
 ///
-///
-/// # Working with `propagate::Result`
-///
-/// There are a few things to remember when using [`propagate::Result`] as a
-/// replacement for the std library result.
-///
-/// ## Creating Errors
-///
-/// Construct an [`Err`] variant by providing an error value and a new trace
-/// (e.g., using [`ErrorTrace::new()`]):
-///
-/// ```
-/// use propagate::ErrorTrace;
-///
-/// fn gives_error() -> propagate::Result<(), &'static str> {
-///     propagate::Err("Nothing here", ErrorTrace::new())
-/// }
-/// ```
-///
-/// ## Pattern Matching
-///
-/// The [`Err`] variant contains two values: the error and its associated trace.
-/// Pattern matching should look like this:
-///
-/// ```
-/// # use propagate::ErrorTrace;
-/// # fn gives_error() -> propagate::Result<(), &'static str> {
-/// #     propagate::Err("Nothing here", ErrorTrace::new())
-/// # }
-/// let result: propagate::Result<_, _> = gives_error();
-/// match result {
-///     propagate::Ok(_) => {}
-///     propagate::Err(err, trace) => {
-///         println!("error: {}", err);
-///         println!("trace: {}", trace);
-///     }
-/// }
-/// ```
-///
-/// ## **IMPORTANT**: Forwarding Errors
-///
-/// When not using `try` blocks, you must remember to surround result values
-/// with `Ok(..?)` when returning them in a function. The compiler will not
-/// force you to do this if the result value's type is identical to the
-/// function's return type.
-///
-/// ```
-/// # use propagate::ErrorTrace;
-/// # fn gives_error() -> propagate::Result<(), &'static str> {
-/// #     propagate::Err("Nothing here", ErrorTrace::new())
-/// # }
-/// // YES: Result surrounded by Ok(..?), so the error trace will include foo()
-/// fn foo() -> propagate::Result<(), &'static str> {
-///     let result = gives_error();
-///     propagate::Ok(result?)
-/// }
-///
-/// // NO: Result returned directly, so the error trace will not include bar()
-/// fn bar() -> propagate::Result<(), &'static str> {
-///     let result = gives_error();
-///     result
-/// }
-/// ```
-///
-/// When you use `try` blocks, you do not need the `Ok`:
-///
-/// ```
-/// #![feature(try_blocks)]
-/// # use propagate::ErrorTrace;
-/// # fn gives_error() -> propagate::Result<(), &'static str> {
-/// #     propagate::Err("Nothing here", ErrorTrace::new())
-/// # }
-/// fn foo() -> propagate::Result<(), &'static str> {
-///     try {
-///         let result = gives_error();
-///         result?
-///     }
-/// }
-/// ```
-///
-/// And the compiler will force you to use `?`:
-///
-/// ```compile_fail
-/// #![feature(try_blocks)]
-/// # use propagate::ErrorTrace;
-/// # fn gives_error() -> propagate::Result<(), &'static str> {
-/// #     propagate::Err("Nothing here", ErrorTrace::new())
-/// # }
-/// fn bar() -> propagate::Result<(), &'static str> {
-///     try {
-///         let result = gives_error();
-///         result
-///     }
-/// }
-/// ```
-///
 /// [`propagate::Result`]: crate::Result
+/// [`try` blocks]: https://doc.rust-lang.org/beta/unstable-book/language-features/try-blocks.html
 #[must_use = "this `Result` may be an `Err` variant, which should be handled"]
 #[derive(PartialEq, Eq, Debug, Hash)]
 pub enum Result<T, E, S = ErrorTrace> {
