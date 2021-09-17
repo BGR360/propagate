@@ -146,6 +146,8 @@
 // * Add a feature flag to fall back to standard library results.
 // * Massage `CodeLocation` and `ErrorTrace` a bit.
 // * Improve crate-level docs a bit.
+// * Put more thought into the Result interface.
+//   - i.e., should more methods preserve the error trace?
 
 pub mod result;
 pub mod trace;
