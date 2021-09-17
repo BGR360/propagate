@@ -147,13 +147,13 @@
 // * Massage `CodeLocation` and `CodeLocationStack` a bit.
 // * Improve crate-level docs a bit.
 
-pub mod error;
 pub mod result;
+pub mod trace;
 
 #[doc(inline)]
 pub use self::{
-    error::{CodeLocation, CodeLocationStack},
     result::{Result, Traced},
+    trace::{CodeLocation, CodeLocationStack},
 };
 
 pub use self::result::Result::{Err, Ok};

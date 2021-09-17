@@ -30,7 +30,7 @@ impl CodeLocation {
     /// # Example
     ///
     /// ```no_run
-    /// # use propagate::error::*;
+    /// # use propagate::trace::*;
     /// // begin file: foo.rs
     /// let loc = CodeLocation::here();
     /// assert_eq!(format!("{}", &loc), "foo.rs:1");
@@ -47,7 +47,7 @@ impl CodeLocation {
     /// # Example
     ///
     /// ```no_run
-    /// # use propagate::error::*;
+    /// # use propagate::trace::*;
     /// // begin file: foo.rs
     /// let loc = CodeLocation::here().down_by(1);
     /// assert_eq!(format!("{}", &loc), "foo.rs:2");
