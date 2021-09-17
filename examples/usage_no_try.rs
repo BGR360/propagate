@@ -47,9 +47,9 @@ fn file_size(path: &str) -> propagate::Result<u64, MyError> {
         // Option 1: Coerce a `std::result::Result` to a `propagate::Result`
         // using `?`.
         Err(MyError::TooSmall(size))?
-    } else {
-        propagate::Ok(size)
     }
+
+    propagate::Ok(size)
 }
 
 fn maybe_file_size(path: &str) -> propagate::Result<u64, MyError> {
@@ -58,11 +58,11 @@ fn maybe_file_size(path: &str) -> propagate::Result<u64, MyError> {
     if !lucky {
         // Option 2: Directly construct a `propagate::Result`
         // using `ErrorTrace::new()`.
-        propagate::Err(MyError::Unlucky, ErrorTrace::new())
-    } else {
-        // Must remember to surround with `Ok(..?)`.
-        propagate::Ok(file_size(path)?)
+        return propagate::Err(MyError::Unlucky, ErrorTrace::new());
     }
+
+    // Must remember to surround with `Ok(..?)`.
+    propagate::Ok(file_size(path)?)
 }
 
 fn main() -> propagate::Result<(), MyError> {

@@ -121,9 +121,9 @@
 //!         // Option 1: Coerce a `std::result::Result` to a `propagate::Result`
 //!         // using `?`.
 //!         Err(MyError::TooSmall(size))?
-//!     } else {
-//!         propagate::Ok(size)
 //!     }
+//!     
+//!     propagate::Ok(size)
 //! }
 //!
 //! fn maybe_file_size(path: &str) -> propagate::Result<u64, MyError> {
@@ -132,11 +132,11 @@
 //!     if !lucky {
 //!         // Option 2: Directly construct a `propagate::Result`
 //!         // using `ErrorTrace::new()`.
-//!         propagate::Err(MyError::Unlucky, ErrorTrace::new())
-//!     } else {
-//!         // Must remember to surround with `Ok(..?)`.
-//!         propagate::Ok(file_size(path)?)
+//!         return propagate::Err(MyError::Unlucky, ErrorTrace::new())
 //!     }
+//!     
+//!     // Must remember to surround with `Ok(..?)`.
+//!     propagate::Ok(file_size(path)?)
 //! }
 //! ```
 //!
@@ -155,6 +155,7 @@
 // * Improve crate-level docs a bit.
 // * Put more thought into the Result interface.
 //   - i.e., should more methods preserve the error trace?
+// * Put `MyError` into shared example module?
 
 pub mod result;
 pub mod trace;
