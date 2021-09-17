@@ -160,6 +160,7 @@ pub use self::{
 
 pub use self::result::Result::{Err, Ok};
 
+#[cfg(test)]
 mod test;
 
 // Test that all code snippets in README.md compile.
