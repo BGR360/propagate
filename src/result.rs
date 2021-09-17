@@ -344,14 +344,6 @@ impl<T, E, S: Traced> Result<T, E, S> {
         }
     }
 
-    #[inline]
-    pub fn as_std_ref(&self) -> std::result::Result<&T, &E> {
-        match self {
-            Ok(ref t) => std::result::Result::Ok(t),
-            Err(ref err, _) => std::result::Result::Err(err),
-        }
-    }
-
     /// Converts from `Result<T, E, S>` to [`Option<(E, S)>`][Option].
     ///
     /// Converts `self` into an [`Option<(E, S)>`][Option], consuming `self`,
