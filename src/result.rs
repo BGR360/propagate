@@ -1,6 +1,6 @@
 //! Defines a new result type.
 
-use crate::CodeLocationStack;
+use crate::trace::{CodeLocationStack, Traced};
 
 use std::convert::Infallible;
 use std::fmt;
@@ -10,11 +10,6 @@ use std::process::Termination;
 
 pub use self::Result::Err;
 pub use self::Result::Ok;
-
-/// A trait denoting "stack-like" types that can be used with [`Result<T, E, S>`].
-pub trait Traced {
-    fn trace(&mut self, location: &'static panic::Location);
-}
 
 /*  ____                 _ _    _______   _______
  * |  _ \ ___  ___ _   _| | |_ / /_   _| | ____\ \

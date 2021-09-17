@@ -152,8 +152,8 @@ pub mod trace;
 
 #[doc(inline)]
 pub use self::{
-    result::{Result, Traced},
-    trace::{CodeLocation, CodeLocationStack},
+    result::Result,
+    trace::{CodeLocation, CodeLocationStack, Traced},
 };
 
 pub use self::result::Result::{Err, Ok};

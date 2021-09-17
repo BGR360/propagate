@@ -3,7 +3,10 @@
 use std::fmt;
 use std::panic;
 
-use crate::result::Traced;
+/// A trait denoting "stack-like" types that can be used with [`Result<T, E, S>`].
+pub trait Traced {
+    fn trace(&mut self, location: &'static panic::Location);
+}
 
 /*   ____          _      _                    _   _
  *  / ___|___   __| | ___| |    ___   ___ __ _| |_(_) ___  _ __
