@@ -8,6 +8,15 @@ results using the `?` operator.
 
 ## Usage
 
+### Documentation
+
+View the API docs at https://bgr360.github.io/propagate/propagate/.
+
+See [examples/](examples/) for some more examples showing the usage of the
+Propagate crate.
+
+### Example
+
 ```rust
 use std::fs::File;
 use std::io;
@@ -110,8 +119,7 @@ cargo +nightly build
 
 ### Examples
 
-See [examples/](examples/) for some examples showing the usage of the
-Propagate crate. Run them as such:
+To run one of the examples, like [`examples/usage.rs`](examples/usage.rs), do:
 
 ```txt
 cargo +nightly run --example usage
@@ -123,15 +131,4 @@ To run tests:
 
 ```txt
 cargo +nightly test
-```
-
-### Documentation
-
-The rustdocs may lag behind as changes are made to the code. The examples and
-tests should be your first stop for understanding how the crate works.
-
-To view the rustdocs, use `cargo`:
-
-```txt
-cargo doc --open
 ```
