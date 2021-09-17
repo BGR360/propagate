@@ -163,3 +163,8 @@ pub mod prelude {
 }
 
 mod test;
+
+// Test that all code snippets in README.md compile.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+pub struct ReadmeDoctests;

@@ -2,6 +2,37 @@
 
 Error propagation tracing in Rust.
 
+This crate provides `propagate::Result`, a replacement for the standard
+library result type that automatically tracks the propagation of error
+results using the `?` operator.
+
+## Usage
+
+```rust
+use std::fs::File;
+use std::io;
+
+fn file_size(path: &str) -> propagate::Result<u64, io::Error> {
+    let size = File::open(path)?
+        .metadata()?
+        .len();
+    propagate::Ok(size)
+}
+
+fn main() {
+    let result = file_size("foo.txt");
+
+    match result {
+        propagate::Ok(size) => {
+            println!("Ok: {}", size);
+        }
+        propagate::Err(traced_err) => {
+            println!("Err: {:?}", traced_err.error());
+            println!("Stack trace: {}", traced_err.stack());
+        }
+    }
+}
+```
 
 
 ## Why Propagate?
@@ -70,7 +101,7 @@ See the crate docs for more details.
 Propagate requires [`#[feature(try_trait_v2)]`][try] and
 [`#[feature(control_flow_enum)]`][control]. Build with Rust nightly:
 
-```
+```txt
 cargo +nightly build
 ```
 
@@ -82,7 +113,7 @@ cargo +nightly build
 See [examples/](examples/) for some examples showing the usage of the
 Propagate crate. Run them as such:
 
-```
+```txt
 cargo +nightly run --example usage
 ```
 
@@ -90,7 +121,7 @@ cargo +nightly run --example usage
 
 To run tests:
 
-```
+```txt
 cargo +nightly test
 ```
 
@@ -101,6 +132,6 @@ tests should be your first stop for understanding how the crate works.
 
 To view the rustdocs, use `cargo`:
 
-```
+```txt
 cargo doc --open
 ```
