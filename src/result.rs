@@ -23,58 +23,56 @@ pub use self::Result::Ok;
 /// A replacement for [`std::result::Result`] that supports chaining via the `?`
 /// operator.
 ///
-/// # Propagation Using `?`
-///
 /// After a [`propagate::Result`] has been constructed, it will keep a running
 /// "stack trace" of the code locations where the `?` operator is invoked on it.
 ///
-/// ## Coercion Using `From`
+/// # Coercion Using `?`
 ///
-/// Any `propagate::Result<T, E>` can be coerced to a `propagate::Result<T, F>`
-/// using the `?` operator if there is a [`From<E>`] defined for type `F`:
+/// The `?` operator can be used to coerce between result types.
+///
+/// ## From `propagate` to `propagate`
+///
+/// One `propagate::Result` can be coerced to another if there is an
+/// implementation of [`From`] between the two error types:
 ///
 /// ```
-/// use propagate::ErrorTrace;
+/// #![feature(try_blocks)]
+/// # use propagate::ErrorTrace;
 ///
-/// fn f() -> propagate::Result<(), String> {
-///     let result: propagate::Result<(), &str> =
-///         propagate::Err("str slice", ErrorTrace::new());
+/// let result: propagate::Result<(), &str> =
+///     propagate::Err("str slice", ErrorTrace::new());
 ///
-///     // Coerces string slice to String object
-///     propagate::Ok(result?)
-/// }
+/// // Coerces string slice to String object
+/// let result: propagate::Result<(), String> = try { result? };
 /// ```
 ///
-/// ## Coercion from `std::result::Result`
+/// ## From `std` to `propagate`
 ///
 /// To provide easy interoperability with standard library modules and other
 /// crates that return results, any [`std::result::Result`] can be coerced to a
-/// `propagate::Result` using the `?` operator:
+/// `propagate::Result`:
 ///
 /// ```
-/// use std::fs::File;
+/// #![feature(try_blocks)]
 ///
-/// fn f() -> propagate::Result<File, std::io::Error> {
-///     let result: Result<File, std::io::Error> =
-///         File::open("foo.txt");
+/// let result: Result<(), u32> = Err(42);
 ///
-///     // Coerces std::result::Result to propagate::Result
-///     propagate::Ok(result?)
-/// }
+/// // Coerces std::result::Result to propagate::Result
+/// let result: propagate::Result<(), u32> = try { result? };
 /// ```
 ///
-/// You can also coerce `std::result::Result<T, E>` to `propagate::Result<T, F>`
-/// if there is a [`From<E>`] defined for type `F`.
+/// And if there is an implementation of [`From`] between the two error types,
+/// you can do that coercion at the same time:
 ///
 /// ```
-/// fn f() -> propagate::Result<(), String> {
-///     let result: Result<(), &str> = Err("string slice");
+/// #![feature(try_blocks)]
 ///
-///     // Coerces std::result::Result to propagate::Result
-///     // AND
-///     // Coerces string slice to String object
-///     propagate::Ok(result?)
-/// }
+/// let result: Result<(), &str> = Err("string slice");
+///
+/// // Coerces std::result::Result to propagate::Result
+/// // AND
+/// // Coerces string slice to String object
+/// let result: propagate::Result<(), String> = try { result? };
 /// ```
 ///
 ///
