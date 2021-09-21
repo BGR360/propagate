@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["propagate"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"propagate/struct.ErrorTrace.html\" title=\"struct propagate::ErrorTrace\">ErrorTrace</a>","synthetic":false,"types":["propagate::trace::ErrorTrace"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

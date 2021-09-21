@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["CodeLocation","Represents a location (filename, line number) in the source code."],["ErrorTrace","A stack of code locations forming an error trace."]],"trait":[["Traced","A trait denoting “stack-like” types that can be used with [`Result<T, E, S>`][crate::Result]."]]});

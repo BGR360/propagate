@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Result","A replacement for [`std::result::Result`] that supports tracing via the `?` operator."]]});
