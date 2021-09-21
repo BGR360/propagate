@@ -17,30 +17,66 @@ Propagate crate.
 
 ### Example
 
+Here is a motivating example where a `propagate::Result` is propagated
+from one thread to another:
+
 ```rust
 use std::fs::File;
 use std::io;
+use std::sync::mpsc;
+use std::thread;
 
-fn file_size(path: &str) -> propagate::Result<u64, io::Error> {
-    let size = File::open(path)?
-        .metadata()?
-        .len();
+fn open_file(path: &str) -> propagate::Result<File, io::Error> {
+    let file = File::open(path)?; // <-------- If open failed, `?` starts a new error trace.
+    propagate::Ok(file)
+}
+
+fn file_size(file: &File) -> propagate::Result<u64, io::Error> {
+    let size = file.metadata()?.len();
     propagate::Ok(size)
 }
 
+fn file_summary(path: &'static str) -> propagate::Result<String, io::Error> {
+    let (tx, rx) = mpsc::channel();
+
+    // Open the file on a separate thread, send result to this thread.
+    thread::spawn(move || {
+        let open_result = open_file(path);
+        tx.send(open_result).unwrap();
+    });
+
+    // Make the summary on this thread.
+    let open_result = rx.recv().unwrap();
+    let file = open_result?; // <------------- If open failed, `?` continues the error trace.
+    let size = file_size(&file)?;
+
+    let summary = format!("{}: {} bytes", path, size);
+    propagate::Ok(summary)
+}
+
 fn main() {
-    let result = file_size("foo.txt");
+    let result = file_summary("foo.txt");
 
     match result {
-        propagate::Ok(size) => {
-            println!("Ok: {}", size);
+        propagate::Ok(summary) => {
+            println!("{}", summary);
         }
         propagate::Err(err, trace) => {
             println!("Err: {:?}", err);
-            println!("Stack trace: {}", trace);
+            println!("\nStack trace: {}", trace);
         }
     }
 }
+```
+
+Output:
+
+```txt
+Err: Os { code: 2, kind: NotFound, message: "No such file or directory" }
+
+Stack trace: 
+   0: examples/readme.rs:7
+   1: examples/readme.rs:27
 ```
 
 
