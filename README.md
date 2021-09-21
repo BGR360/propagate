@@ -1,6 +1,6 @@
 # Propagate
 
-Error propagation tracing in Rust.
+Error return tracing in Rust.
 
 This crate provides `propagate::Result`, a replacement for the standard
 library result type that automatically tracks the propagation of error
@@ -35,7 +35,7 @@ fn main() {
         }
         propagate::Err(err, trace) => {
             println!("Err: {:?}", err);
-            println!("\nStack trace: {}", trace);
+            println!("\nReturn trace: {}", trace);
         }
     }
 }
@@ -74,7 +74,7 @@ Output:
 ```txt
 Err: Os { code: 2, kind: NotFound, message: "No such file or directory" }
 
-Stack trace: 
+Return trace: 
    0: examples/readme.rs:21
    1: examples/readme.rs:41
 ```
@@ -87,29 +87,34 @@ software written in Rust. For easy diagnosis, errors should provide some
 sort of **trace** denoting source code locations that contributed to the
 error.
 
-Crates such as [`anyhow`][anyhow] provide easy access to backtraces when
+Crates such as [`anyhow`][anyhow] provide easy access to stack traces when
 creating errors. The Propagate crate provides something similar but more
-powerful, which I call **propagation tracing**:
-every time the `?` operator is applied to an error result, the code location
-of that `?` invocation is appended to a running "stack trace" stored in the
-result.
+powerful:
 
-Propagation tracing differs from runtime backtracing in a few important
-ways. You should evaluate which approach is appropriate for your
-application.
+> #### Error Return Tracing
+> Every time the `?` operator is applied to an error result, the code location
+> of that `?` invocation is appended to a running **return trace** stored in the
+> result.
+
+Take a look at [the Zig language's description][zig-return] of return tracing if
+you want another good explanation.
+
+Return tracing differs from runtime backtracing in a few important ways. You
+should evaluate which approach is appropriate for your application.
 
 [anyhow]: https://docs.rs/anyhow/latest/anyhow/
+[zig-return]: https://ziglang.org/documentation/master/#Error-Return-Traces
 
-### Advantages of Propagation Tracing
+### Advantages of Return Tracing
 
 **Multithreaded tracing**
 
-A backtrace provides a single point-in-time capture of a call stack on a
-single thread. In complex software, error results may pass between multiple
+A stack trace provides a single point-in-time capture of the call stack on a
+*single thread*. In complex software, error results may pass between multiple
 threads on their way up to their final consumers.
 
-Propagate provides a true view into the path that an error takes
-through your code, even if it passes between multiple threads.
+Propagate provides a true view into the path that an error takes through your
+code, even if it passes between multiple threads.
 
 **Low performance overhead**
 
@@ -120,7 +125,7 @@ With Propagate, the information for each code location is compiled statically
 into your application's binary, and the stack trace is built up in real time as
 the error propagates from function to function.
 
-### Disadvantages of Propagation Tracing
+### Disadvantages of Return Tracing
 
 **Code size**
 

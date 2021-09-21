@@ -3,7 +3,7 @@ name = "propagate"
 version = "0.0.2"
 edition = "2018"
 authors = ["Ben Reeves <breeves@qumulo.com>"]
-description = "Error propagation tracing in Rust."
+description = "Error return tracing in Rust."
 
 [dependencies]
 trial-and-error = { git = "https://github.com/yaahc/trial-and-error" }

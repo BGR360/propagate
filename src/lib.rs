@@ -84,7 +84,7 @@
 //! #                 MyError::Io(e) => println!("I/O error: {}", e),
 //! #                 MyError::TooSmall(size) => println!("File too small: {} bytes", size),
 //! #             }
-//! #             println!("Stack trace: {}", trace);
+//! #             println!("Return trace: {}", trace);
 //! #         }
 //! #     }
 //! # }

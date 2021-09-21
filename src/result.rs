@@ -24,7 +24,7 @@ pub use self::Result::Ok;
 /// operator.
 ///
 /// After a [`propagate::Result`] has been constructed, it will keep a running
-/// "stack trace" of the code locations where the `?` operator is invoked on it.
+/// "return trace" of the code locations where the `?` operator is invoked on it.
 ///
 /// # Working with `propagate::Result`
 ///

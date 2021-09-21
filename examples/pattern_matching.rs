@@ -25,7 +25,7 @@ fn main() {
                 MyError::Other => println!("Error (other)"),
             }
 
-            println!("\nStack trace: {}", trace);
+            println!("\nReturn trace: {}", trace);
         }
     }
 }

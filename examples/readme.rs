@@ -12,7 +12,7 @@ fn main() {
         }
         propagate::Err(err, trace) => {
             println!("Err: {:?}", err);
-            println!("\nStack trace: {}", trace);
+            println!("\nReturn trace: {}", trace);
         }
     }
 }
